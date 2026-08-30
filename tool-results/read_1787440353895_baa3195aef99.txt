@@ -1,0 +1,360 @@
+     1→/**
+     2→ * Case #001 — THE MIDNIGHT ARCHIVE
+     3→ * Investigation database seed.
+     4→ *
+     5→ * Solution: Maya Chen (CFO) killed Elias Voss.
+     6→ *   - Motive: Elias discovered her embezzlement scheme tagged with reference TR-4817
+     7→ *     (many small fraudulent payments to shell vendors aggregating to ~$340k).
+     8→ *   - Means: She secretly returned to Nexora after supposedly leaving at 21:00,
+     9→ *     and entered the Archive during the time of death (22:40–22:55).
+    10→ *   - Accomplice: Daniel Brooks (Head of Security) disabled the Archive camera
+    11→ *     and wiped the terminal afterwards — coordinated via calls/messages with Maya.
+    12→ *   - Cover-up: Elias's phone was taken; his workstation was wiped.
+    13→ *
+    14→ * Data ported verbatim from scripts/seed-investigation.ts (lines 165–456).
+    15→ */
+    16→import type { InvestigationDatabaseSeed } from "@/stories/types";
+    17→
+    18→const T = (h: number, m: number, s = 0) =>
+    19→  `2025-03-14 ${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    20→
+    21→export const CASE_001_DATABASE: InvestigationDatabaseSeed = {
+    22→  tables: [
+    23→    // ---------- SUSPECTS (4 rows) ----------
+    24→    // Persons of interest. Maya is the killer. Daniel is the accomplice.
+    25→    {
+    26→      name: "suspects",
+    27→      rows: [
+    28→        {
+    29→          suspect_id: "S001",
+    30→          name: "Maya Chen",
+    31→          role: "Chief Financial Officer",
+    32→          department: "Finance",
+    33→          hire_date: "2017-04-12",
+    34→          status: "Person of Interest",
+    35→          badge_id: "MC-4471",
+    36→          phone: "+1-415-555-0142",
+    37→          alibi:
+    38→            "States she left the Nexora building at 21:00 and drove home. Claims to have been home alone the rest of the evening reviewing quarterly reports.",
+    39→          notes:
+    40→            "CFO with signatory authority over vendor payments. Recently came under pressure from Elias regarding a vendor ledger audit. Separation negotiations were underway.",
+    41→        },
+    42→        {
+    43→          suspect_id: "S002",
+    44→          name: "Daniel Brooks",
+    45→          role: "Head of Security",
+    46→          department: "Security",
+    47→          hire_date: "2015-09-03",
+    48→          status: "Person of Interest",
+    49→          badge_id: "DB-2208",
+    50→          phone: "+1-415-555-0177",
+    51→          alibi:
+    52→            "On duty the entire evening. Claims he was in the Security Control Room monitoring feeds and conducting a routine perimeter sweep between 22:30 and 23:00.",
+    53→          notes:
+    54→            "Unrestricted access to all locations including the Archive. Authorized to disable cameras for maintenance. Personal relationship with Maya Chen (undisclosed).",
+    55→        },
+    56→        {
+    57→          suspect_id: "S003",
+    58→          name: "Sofia Martinez",
+    59→          role: "Senior Software Engineer",
+    60→          department: "Engineering",
+    61→          hire_date: "2019-02-18",
+    62→          status: "Person of Interest",
+    63→          badge_id: "SM-3390",
+    64→          phone: "+1-415-555-0188",
+    65→          alibi:
+    66→            "Badge records show her on Floor 3 (Engineering Lab) from 19:00 to 23:20. Claims she was debugging the deployment pipeline and never went below Floor 1.",
+    67→          notes:
+    68→            "Holds remote administrative access to Nexora servers. Denied a promotion to Staff Engineer two weeks prior. No documented financial motive.",
+    69→        },
+    70→        {
+    71→          suspect_id: "S004",
+    72→          name: "Ryan Cole",
+    73→          role: "Operations Manager",
+    74→          department: "Operations",
+    75→          hire_date: "2018-06-22",
+    76→          status: "Person of Interest",
+    77→          badge_id: "RC-5512",
+    78→          phone: "+1-415-555-0193",
+    79→          alibi:
+    80→            "Was inside the building until 23:47. States he discovered the body during a final perimeter walk. No corroborating witness.",
+    81→          notes:
+    82→            "Holds Archive access for facility inspections. Filed a complaint against Elias Voss regarding unsafe staffing levels. Reported the death to emergency services at 23:52.",
+    83→        },
+    84→      ],
+    85→    },
+    86→
+    87→    // ---------- EMPLOYEES (13 rows) ----------
+    88→    // Broader employees (victim + non-suspects).
+    89→    {
+    90→      name: "employees",
+    91→      rows: [
+    92→        { employee_id: "EMP-001", name: "Elias Voss", role: "Founder & CEO", department: "Executive", hire_date: "2009-01-05", status: "Deceased", badge_id: "EV-0010", phone: "+1-415-555-0100", email: "elias.voss@nexora.sys" },
+    93→        { employee_id: "EMP-002", name: "Maya Chen", role: "Chief Financial Officer", department: "Finance", hire_date: "2017-04-12", status: "Active", badge_id: "MC-4471", phone: "+1-415-555-0142", email: "maya.chen@nexora.sys" },
+    94→        { employee_id: "EMP-003", name: "Daniel Brooks", role: "Head of Security", department: "Security", hire_date: "2015-09-03", status: "Active", badge_id: "DB-2208", phone: "+1-415-555-0177", email: "daniel.brooks@nexora.sys" },
+    95→        { employee_id: "EMP-004", name: "Sofia Martinez", role: "Senior Software Engineer", department: "Engineering", hire_date: "2019-02-18", status: "Active", badge_id: "SM-3390", phone: "+1-415-555-0188", email: "sofia.martinez@nexora.sys" },
+    96→        { employee_id: "EMP-005", name: "Ryan Cole", role: "Operations Manager", department: "Operations", hire_date: "2018-06-22", status: "Active", badge_id: "RC-5512", phone: "+1-415-555-0193", email: "ryan.cole@nexora.sys" },
+    97→        { employee_id: "EMP-006", name: "Priya Nair", role: "Lead Auditor", department: "Finance", hire_date: "2020-03-09", status: "Active", badge_id: "PN-6620", phone: "+1-415-555-0211", email: "priya.nair@nexora.sys" },
+    98→        { employee_id: "EMP-007", name: "Marcus Webb", role: "Security Officer", department: "Security", hire_date: "2021-07-15", status: "Active", badge_id: "MW-7781", phone: "+1-415-555-0233", email: "marcus.webb@nexora.sys" },
+    99→        { employee_id: "EMP-008", name: "Lena Hart", role: "Archive Librarian", department: "Operations", hire_date: "2016-11-30", status: "On Leave", badge_id: "LH-8890", phone: "+1-415-555-0244", email: "lena.hart@nexora.sys" },
+   100→        { employee_id: "EMP-009", name: "Tomas Reyes", role: "Junior Developer", department: "Engineering", hire_date: "2023-01-16", status: "Active", badge_id: "TR-9901", phone: "+1-415-555-0255", email: "tomas.reyes@nexora.sys" },
+   101→        { employee_id: "EMP-010", name: "Anika Desai", role: "HR Director", department: "Human Resources", hire_date: "2018-02-01", status: "Active", badge_id: "AD-1023", phone: "+1-415-555-0266", email: "anika.desai@nexora.sys" },
+   102→        { employee_id: "EMP-011", name: "Victor Sato", role: "Facilities Technician", department: "Operations", hire_date: "2022-05-10", status: "Active", badge_id: "VS-3344", phone: "+1-415-555-0277", email: "victor.sato@nexora.sys" },
+   103→        { employee_id: "EMP-012", name: "Helen Park", role: "Legal Counsel", department: "Legal", hire_date: "2019-09-23", status: "Active", badge_id: "HP-4456", phone: "+1-415-555-0288", email: "helen.park@nexora.sys" },
+   104→        { employee_id: "EMP-013", name: "Nadia Kim", role: "Vendor Accounts Analyst", department: "Finance", hire_date: "2021-10-04", status: "Active", badge_id: "NK-5567", phone: "+1-415-555-0299", email: "nadia.kim@nexora.sys" },
+   105→      ],
+   106→    },
+   107→
+   108→    // ---------- LOCATIONS (11 rows) ----------
+   109→    {
+   110→      name: "locations",
+   111→      rows: [
+   112→        { location_id: "LOC-01", name: "Lobby", floor: "1", description: "Main entrance and reception.", access_level: "PUBLIC", has_camera: 1, camera_id: "CAM-01" },
+   113→        { location_id: "LOC-02", name: "Executive Office", floor: "12", description: "CEO and executive suites.", access_level: "EXECUTIVE", has_camera: 1, camera_id: "CAM-02" },
+   114→        { location_id: "LOC-03", name: "Engineering Lab", floor: "3", description: "Development servers and workstations.", access_level: "STAFF", has_camera: 1, camera_id: "CAM-03" },
+   115→        { location_id: "LOC-04", name: "Archive", floor: "B2", description: "Private document and prototype archive. Restricted access.", access_level: "RESTRICTED", has_camera: 1, camera_id: "CAM-04" },
+   116→        { location_id: "LOC-05", name: "Server Room", floor: "B2", description: "Primary data center.", access_level: "RESTRICTED", has_camera: 1, camera_id: "CAM-05" },
+   117→        { location_id: "LOC-06", name: "Security Control Room", floor: "1", description: "Monitoring station for all cameras and access logs.", access_level: "SECURITY", has_camera: 1, camera_id: "CAM-06" },
+   118→        { location_id: "LOC-07", name: "Finance Office", floor: "4", description: "Accounting and treasury.", access_level: "STAFF", has_camera: 1, camera_id: "CAM-07" },
+   119→        { location_id: "LOC-08", name: "Parking Garage", floor: "B1", description: "Employee parking.", access_level: "PUBLIC", has_camera: 1, camera_id: "CAM-08" },
+   120→        { location_id: "LOC-09", name: "Rooftop Terrace", floor: "R", description: "Executive rooftop access.", access_level: "EXECUTIVE", has_camera: 1, camera_id: "CAM-09" },
+   121→        { location_id: "LOC-10", name: "Loading Bay", floor: "1", description: "Deliveries and freight.", access_level: "STAFF", has_camera: 1, camera_id: "CAM-10" },
+   122→        { location_id: "LOC-11", name: "Side Entrance", floor: "1", description: "Staff side entrance on the east wing. Card-only, no guard after 20:00.", access_level: "STAFF", has_camera: 1, camera_id: "CAM-11" },
+   123→      ],
+   124→    },
+   125→
+   126→    // ---------- VISITS (27 rows) — MOVEMENT THREAD ----------
+   127→    // Maya supposedly left at 21:00 but secretly RETURNED via the side entrance at 22:18.
+   128→    // This is the central movement contradiction.
+   129→    {
+   130→      name: "visits",
+   131→      rows: [
+   132→        // Elias Voss — the victim
+   133→        { visit_id: "V-1001", person_id: "EMP-001", person_name: "Elias Voss", location_id: "LOC-01", location_name: "Lobby", entry_time: T(18, 12), exit_time: T(18, 14), access_method: "BADGE", badge_id: "EV-0010" },
+   134→        { visit_id: "V-1002", person_id: "EMP-001", person_name: "Elias Voss", location_id: "LOC-02", location_name: "Executive Office", entry_time: T(18, 15), exit_time: T(22, 33), access_method: "BADGE", badge_id: "EV-0010" },
+   135→        { visit_id: "V-1003", person_id: "EMP-001", person_name: "Elias Voss", location_id: "LOC-04", location_name: "Archive", entry_time: T(22, 35), exit_time: null, access_method: "BADGE", badge_id: "EV-0010" },
+   136→
+   137→        // Maya Chen — supposedly left at 21:00, but RETURNED at 22:18 and entered the Archive at 22:41
+   138→        { visit_id: "V-2001", person_id: "EMP-002", person_name: "Maya Chen", location_id: "LOC-01", location_name: "Lobby", entry_time: T(16, 40), exit_time: T(16, 42), access_method: "BADGE", badge_id: "MC-4471" },
+   139→        { visit_id: "V-2002", person_id: "EMP-002", person_name: "Maya Chen", location_id: "LOC-07", location_name: "Finance Office", entry_time: T(16, 45), exit_time: T(20, 55), access_method: "BADGE", badge_id: "MC-4471" },
+   140→        { visit_id: "V-2003", person_id: "EMP-002", person_name: "Maya Chen", location_id: "LOC-01", location_name: "Lobby", entry_time: T(20, 57), exit_time: T(21, 0), access_method: "BADGE", badge_id: "MC-4471" },
+   141→        { visit_id: "V-2004", person_id: "EMP-002", person_name: "Maya Chen", location_id: "LOC-08", location_name: "Parking Garage", entry_time: T(21, 2), exit_time: T(21, 5), access_method: "BADGE", badge_id: "MC-4471" },
+   142→        // *** THE CONTRADICTION *** — Maya re-enters via the unguarded Side Entrance at 22:18
+   143→        { visit_id: "V-2005", person_id: "EMP-002", person_name: "Maya Chen", location_id: "LOC-11", location_name: "Side Entrance", entry_time: T(22, 18), exit_time: T(22, 19), access_method: "BADGE", badge_id: "MC-4471" },
+   144→        // *** MAYA ENTERS THE ARCHIVE during the time-of-death window ***
+   145→        { visit_id: "V-2006", person_id: "EMP-002", person_name: "Maya Chen", location_id: "LOC-04", location_name: "Archive", entry_time: T(22, 41), exit_time: T(22, 54), access_method: "BADGE", badge_id: "MC-4471" },
+   146→        // Maya leaves the building again at 22:58
+   147→        { visit_id: "V-2007", person_id: "EMP-002", person_name: "Maya Chen", location_id: "LOC-11", location_name: "Side Entrance", entry_time: T(22, 56), exit_time: T(22, 58), access_method: "BADGE", badge_id: "MC-4471" },
+   148→
+   149→        // Daniel Brooks — accomplice, in the Security Control Room, leaves briefly (cover)
+   150→        { visit_id: "V-3001", person_id: "EMP-003", person_name: "Daniel Brooks", location_id: "LOC-06", location_name: "Security Control Room", entry_time: T(17, 30), exit_time: T(22, 27), access_method: "BADGE", badge_id: "DB-2208" },
+   151→        { visit_id: "V-3002", person_id: "EMP-003", person_name: "Daniel Brooks", location_id: "LOC-01", location_name: "Lobby", entry_time: T(22, 28), exit_time: T(22, 30), access_method: "BADGE", badge_id: "DB-2208" },
+   152→        // Daniel briefly visits the corridor near the archive (he does NOT enter the Archive itself)
+   153→        { visit_id: "V-3003", person_id: "EMP-003", person_name: "Daniel Brooks", location_id: "LOC-06", location_name: "Security Control Room", entry_time: T(23, 2), exit_time: T(23, 45), access_method: "BADGE", badge_id: "DB-2208" },
+   154→
+   155→        // Sofia Martinez — red herring, on floor 3
+   156→        { visit_id: "V-4001", person_id: "EMP-004", person_name: "Sofia Martinez", location_id: "LOC-01", location_name: "Lobby", entry_time: T(19, 0), exit_time: T(19, 2), access_method: "BADGE", badge_id: "SM-3390" },
+   157→        { visit_id: "V-4002", person_id: "EMP-004", person_name: "Sofia Martinez", location_id: "LOC-03", location_name: "Engineering Lab", entry_time: T(19, 5), exit_time: T(23, 20), access_method: "BADGE", badge_id: "SM-3390" },
+   158→        { visit_id: "V-4003", person_id: "EMP-004", person_name: "Sofia Martinez", location_id: "LOC-01", location_name: "Lobby", entry_time: T(23, 22), exit_time: T(23, 25), access_method: "BADGE", badge_id: "SM-3390" },
+   159→
+   160→        // Ryan Cole — discovered the body
+   161→        { visit_id: "V-5001", person_id: "EMP-005", person_name: "Ryan Cole", location_id: "LOC-01", location_name: "Lobby", entry_time: T(15, 10), exit_time: T(15, 12), access_method: "BADGE", badge_id: "RC-5512" },
+   162→        { visit_id: "V-5002", person_id: "EMP-005", person_name: "Ryan Cole", location_id: "LOC-07", location_name: "Finance Office", entry_time: T(15, 14), exit_time: T(17, 0), access_method: "BADGE", badge_id: "RC-5512" },
+   163→        { visit_id: "V-5003", person_id: "EMP-005", person_name: "Ryan Cole", location_id: "LOC-10", location_name: "Loading Bay", entry_time: T(17, 5), exit_time: T(17, 30), access_method: "BADGE", badge_id: "RC-5512" },
+   164→        { visit_id: "V-5004", person_id: "EMP-005", person_name: "Ryan Cole", location_id: "LOC-01", location_name: "Lobby", entry_time: T(20, 30), exit_time: T(20, 32), access_method: "BADGE", badge_id: "RC-5512" },
+   165→        { visit_id: "V-5005", person_id: "EMP-005", person_name: "Ryan Cole", location_id: "LOC-04", location_name: "Archive", entry_time: T(23, 47), exit_time: T(23, 52), access_method: "BADGE", badge_id: "RC-5512" },
+   166→
+   167→        // Other employees — noise
+   168→        { visit_id: "V-6001", person_id: "EMP-006", person_name: "Priya Nair", location_id: "LOC-07", location_name: "Finance Office", entry_time: T(9, 0), exit_time: T(17, 30), access_method: "BADGE", badge_id: "PN-6620" },
+   169→        { visit_id: "V-6002", person_id: "EMP-007", person_name: "Marcus Webb", location_id: "LOC-06", location_name: "Security Control Room", entry_time: T(8, 0), exit_time: T(16, 0), access_method: "BADGE", badge_id: "MW-7781" },
+   170→        { visit_id: "V-6003", person_id: "EMP-009", person_name: "Tomas Reyes", location_id: "LOC-03", location_name: "Engineering Lab", entry_time: T(10, 15), exit_time: T(18, 45), access_method: "BADGE", badge_id: "TR-9901" },
+   171→        { visit_id: "V-6004", person_id: "EMP-011", person_name: "Victor Sato", location_id: "LOC-10", location_name: "Loading Bay", entry_time: T(7, 30), exit_time: T(16, 0), access_method: "BADGE", badge_id: "VS-3344" },
+   172→        { visit_id: "V-6005", person_id: "EMP-013", person_name: "Nadia Kim", location_id: "LOC-07", location_name: "Finance Office", entry_time: T(8, 30), exit_time: T(16, 45), access_method: "BADGE", badge_id: "NK-5567" },
+   173→        { visit_id: "V-6006", person_id: "EMP-012", person_name: "Helen Park", location_id: "LOC-02", location_name: "Executive Office", entry_time: T(9, 30), exit_time: T(17, 15), access_method: "BADGE", badge_id: "HP-4456" },
+   174→      ],
+   175→    },
+   176→
+   177→    // ---------- CALLS (15 rows) — COMMUNICATION THREAD ----------
+   178→    {
+   179→      name: "calls",
+   180→      rows: [
+   181→        // Elias calls Maya to arrange the archive meeting (confrontation)
+   182→        { call_id: "C-2001", caller_id: "EMP-001", caller_name: "Elias Voss", receiver_id: "EMP-002", receiver_name: "Maya Chen", call_time: T(20, 50), duration_sec: 142, status: "CONNECTED", carrier: "Nexora Internal PBX" },
+   183→        // Maya calls Daniel after learning Elias knows (coordination)
+   184→        { call_id: "C-2002", caller_id: "EMP-002", caller_name: "Maya Chen", receiver_id: "EMP-003", receiver_name: "Daniel Brooks", call_time: T(21, 12), duration_sec: 268, status: "CONNECTED", carrier: "Verizon Wireless" },
+   185→        // Second coordination call Maya -> Daniel, very brief, right before her return
+   186→        { call_id: "C-2003", caller_id: "EMP-002", caller_name: "Maya Chen", receiver_id: "EMP-003", receiver_name: "Daniel Brooks", call_time: T(22, 9), duration_sec: 41, status: "CONNECTED", carrier: "Verizon Wireless" },
+   187→        // Daniel calls Maya after the deed (confirming cover-up complete)
+   188→        { call_id: "C-2004", caller_id: "EMP-003", caller_name: "Daniel Brooks", receiver_id: "EMP-002", receiver_name: "Maya Chen", call_time: T(23, 10), duration_sec: 73, status: "CONNECTED", carrier: "Verizon Wireless" },
+   189→        // Ryan calls 911 to report body
+   190→        { call_id: "C-2005", caller_id: "EMP-005", caller_name: "Ryan Cole", receiver_id: "EXT-911", receiver_name: "Emergency Services", call_time: T(23, 52), duration_sec: 268, status: "CONNECTED", carrier: "Verizon Wireless" },
+   191→        // Maya calls her lawyer earlier that day (looks suspicious but is routine separation talk)
+   192→        { call_id: "C-2006", caller_id: "EMP-002", caller_name: "Maya Chen", receiver_id: "EXT-LAW", receiver_name: "External: J. Pratt (Attorney)", call_time: T(15, 22), duration_sec: 312, status: "CONNECTED", carrier: "Verizon Wireless" },
+   193→        // Sofia food delivery (red herring)
+   194→        { call_id: "C-2007", caller_id: "EMP-004", caller_name: "Sofia Martinez", receiver_id: "EXT-DEL", receiver_name: "External: Food Delivery", call_time: T(21, 30), duration_sec: 95, status: "CONNECTED", carrier: "T-Mobile" },
+   195→        // Routine calls
+   196→        { call_id: "C-2008", caller_id: "EMP-006", caller_name: "Priya Nair", receiver_id: "EMP-002", receiver_name: "Maya Chen", call_time: T(14, 20), duration_sec: 410, status: "CONNECTED", carrier: "Nexora Internal PBX" },
+   197→        { call_id: "C-2009", caller_id: "EMP-001", caller_name: "Elias Voss", receiver_id: "EMP-012", receiver_name: "Helen Park", call_time: T(16, 5), duration_sec: 150, status: "CONNECTED", carrier: "Nexora Internal PBX" },
+   198→        { call_id: "C-2010", caller_id: "EMP-005", caller_name: "Ryan Cole", receiver_id: "EMP-011", receiver_name: "Victor Sato", call_time: T(11, 0), duration_sec: 64, status: "CONNECTED", carrier: "Nexora Internal PBX" },
+   199→        { call_id: "C-2011", caller_id: "EMP-004", caller_name: "Sofia Martinez", receiver_id: "EMP-009", receiver_name: "Tomas Reyes", call_time: T(13, 45), duration_sec: 220, status: "CONNECTED", carrier: "Nexora Internal PBX" },
+   200→        { call_id: "C-2012", caller_id: "EMP-013", caller_name: "Nadia Kim", receiver_id: "EMP-002", receiver_name: "Maya Chen", call_time: T(11, 30), duration_sec: 180, status: "CONNECTED", carrier: "Nexora Internal PBX" },
+   201→        { call_id: "C-2013", caller_id: "EMP-002", caller_name: "Maya Chen", receiver_id: "EXT-BNK", receiver_name: "External: Coastal Bank", call_time: T(13, 10), duration_sec: 540, status: "CONNECTED", carrier: "Verizon Wireless" },
+   202→        // Missed call to Elias from Maya (earlier, looks routine)
+   203→        { call_id: "C-2014", caller_id: "EMP-002", caller_name: "Maya Chen", receiver_id: "EMP-001", receiver_name: "Elias Voss", call_time: T(17, 50), duration_sec: 0, status: "MISSED", carrier: "Nexora Internal PBX" },
+   204→        // Elias to Priya (auditor) — pulling the vendor ledger
+   205→        { call_id: "C-2015", caller_id: "EMP-001", caller_name: "Elias Voss", receiver_id: "EMP-006", receiver_name: "Priya Nair", call_time: T(10, 5), duration_sec: 96, status: "CONNECTED", carrier: "Nexora Internal PBX" },
+   206→      ],
+   207→    },
+   208→
+   209→    // ---------- TRANSACTIONS (31 rows) — FINANCIAL THREAD (TR-4817 mystery) ----------
+   210→    // TR-4817 is a reference code that appears on MANY small transactions.
+   211→    // Individually each looks like a normal vendor payment. Aggregated they reveal
+   212→    // a large embezzlement by Maya Chen (and shell companies tied to her).
+   213→    {
+   214→      name: "transactions",
+   215→      rows: [
+   216→        // *** TR-4817 — the fraudulent reference, spread across small payments over weeks ***
+   217→        // Outgoing vendor payments authorised by Maya, all tagged reference='TR-4817'
+   218→        { transaction_id: "TXN-10001", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 4200, currency: "USD", direction: "OUTGOING", counterparty: "Meridian Consulting LLC", transaction_time: "2025-01-08 14:22:00", description: "Q1 advisory services - invoice MC-1188", reference: "TR-4817", suspicious: 0 },
+   219→        { transaction_id: "TXN-10002", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 5800, currency: "USD", direction: "OUTGOING", counterparty: "Atlas Advisory Group", transaction_time: "2025-01-14 11:05:00", description: "Consulting retainer - invoice AA-204", reference: "TR-4817", suspicious: 0 },
+   220→        { transaction_id: "TXN-10003", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 3750, currency: "USD", direction: "OUTGOING", counterparty: "Apex Partners", transaction_time: "2025-01-22 16:40:00", description: "Strategic review - invoice APX-5591", reference: "TR-4817", suspicious: 0 },
+   221→        { transaction_id: "TXN-10004", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 6100, currency: "USD", direction: "OUTGOING", counterparty: "Cascade Holdings", transaction_time: "2025-02-03 09:18:00", description: "Advisory fee - invoice CH-7720", reference: "TR-4817", suspicious: 0 },
+   222→        { transaction_id: "TXN-10005", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 4900, currency: "USD", direction: "OUTGOING", counterparty: "Meridian Consulting LLC", transaction_time: "2025-02-11 13:55:00", description: "Q1 retainer - invoice MC-1204", reference: "TR-4817", suspicious: 0 },
+   223→        { transaction_id: "TXN-10006", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 7200, currency: "USD", direction: "OUTGOING", counterparty: "Brightline Strategy Co", transaction_time: "2025-02-19 10:30:00", description: "Consulting services - invoice BL-338", reference: "TR-4817", suspicious: 0 },
+   224→        { transaction_id: "TXN-10007", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 5500, currency: "USD", direction: "OUTGOING", counterparty: "Atlas Advisory Group", transaction_time: "2025-02-27 15:12:00", description: "Advisory - invoice AA-261", reference: "TR-4817", suspicious: 0 },
+   225→        { transaction_id: "TXN-10008", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 4600, currency: "USD", direction: "OUTGOING", counterparty: "Cascade Holdings", transaction_time: "2025-03-05 11:44:00", description: "Retainer - invoice CH-7891", reference: "TR-4817", suspicious: 0 },
+   226→        { transaction_id: "TXN-10009", account_holder: "Nexora Systems", person_id: "EMP-002", amount: 6300, currency: "USD", direction: "OUTGOING", counterparty: "Apex Partners", transaction_time: "2025-03-11 14:08:00", description: "Strategic review - invoice APX-5622", reference: "TR-4817", suspicious: 0 },
+   227→        // Kickbacks incoming to Maya's personal account from the SAME shell vendors (same reference)
+   228→        { transaction_id: "TXN-10010", account_holder: "Maya Chen", person_id: "EMP-002", amount: 1800, currency: "USD", direction: "INCOMING", counterparty: "Meridian Consulting LLC", transaction_time: "2025-01-09 03:14:00", description: "Personal consulting - offshore account #4471", reference: "TR-4817", suspicious: 1 },
+   229→        { transaction_id: "TXN-10011", account_holder: "Maya Chen", person_id: "EMP-002", amount: 2400, currency: "USD", direction: "INCOMING", counterparty: "Atlas Advisory Group", transaction_time: "2025-01-16 02:50:00", description: "Advisory fee - account #4471", reference: "TR-4817", suspicious: 1 },
+   230→        { transaction_id: "TXN-10012", account_holder: "Maya Chen", person_id: "EMP-002", amount: 3100, currency: "USD", direction: "INCOMING", counterparty: "Cascade Holdings", transaction_time: "2025-02-04 04:20:00", description: "Retainer - account #4471", reference: "TR-4817", suspicious: 1 },
+   231→        { transaction_id: "TXN-10013", account_holder: "Maya Chen", person_id: "EMP-002", amount: 2900, currency: "USD", direction: "INCOMING", counterparty: "Brightline Strategy Co", transaction_time: "2025-02-20 03:05:00", description: "Consulting - account #4471", reference: "TR-4817", suspicious: 1 },
+   232→        { transaction_id: "TXN-10014", account_holder: "Maya Chen", person_id: "EMP-002", amount: 2200, currency: "USD", direction: "INCOMING", counterparty: "Apex Partners", transaction_time: "2025-03-12 01:40:00", description: "Advisory - account #4471", reference: "TR-4817", suspicious: 1 },
+   233→
+   234→        // Legitimate transactions with OTHER references (noise + to make TR-4817 non-obvious)
+   235→        { transaction_id: "TXN-20001", account_holder: "Elias Voss", person_id: "EMP-001", amount: 21000, currency: "USD", direction: "OUTGOING", counterparty: "Nexora Systems Payroll", transaction_time: "2025-03-01 09:00:00", description: "Salary reimbursement", reference: "TR-PAYROLL", suspicious: 0 },
+   236→        { transaction_id: "TXN-20002", account_holder: "Maya Chen", person_id: "EMP-002", amount: 95000, currency: "USD", direction: "INCOMING", counterparty: "Nexora Systems Payroll", transaction_time: "2025-03-12 09:00:00", description: "Annual bonus disbursement", reference: "TR-PAYROLL", suspicious: 0 },
+   237→        { transaction_id: "TXN-20003", account_holder: "Maya Chen", person_id: "EMP-002", amount: 7700, currency: "USD", direction: "OUTGOING", counterparty: "Coastal Realty", transaction_time: "2025-02-20 11:45:00", description: "Mortgage payment", reference: "TR-PERS", suspicious: 0 },
+   238→        { transaction_id: "TXN-20004", account_holder: "Maya Chen", person_id: "EMP-002", amount: 14000, currency: "USD", direction: "OUTGOING", counterparty: "Pratt & Associates Legal", transaction_time: "2025-03-13 16:20:00", description: "Legal consultation fee", reference: "TR-PERS", suspicious: 0 },
+   239→        { transaction_id: "TXN-20005", account_holder: "Sofia Martinez", person_id: "EMP-004", amount: 4200, currency: "USD", direction: "OUTGOING", counterparty: "TechGear Supplies", transaction_time: "2025-03-05 14:30:00", description: "Equipment purchase", reference: "TR-PERS", suspicious: 0 },
+   240→        { transaction_id: "TXN-20006", account_holder: "Ryan Cole", person_id: "EMP-005", amount: 1850, currency: "USD", direction: "OUTGOING", counterparty: "City Utilities", transaction_time: "2025-03-08 10:15:00", description: "Facilities utility payment", reference: "TR-PERS", suspicious: 0 },
+   241→        { transaction_id: "TXN-20007", account_holder: "Priya Nair", person_id: "EMP-006", amount: 5300, currency: "USD", direction: "INCOMING", counterparty: "Nexora Systems Payroll", transaction_time: "2025-03-01 09:00:00", description: "Audit completion bonus", reference: "TR-PAYROLL", suspicious: 0 },
+   242→        { transaction_id: "TXN-20008", account_holder: "Elias Voss", person_id: "EMP-001", amount: 1200000, currency: "USD", direction: "OUTGOING", counterparty: "Meridian Capital", transaction_time: "2025-03-11 13:00:00", description: "Acquisition escrow deposit", reference: "TR-ACQ-09", suspicious: 0 },
+   243→        { transaction_id: "TXN-20009", account_holder: "Daniel Brooks", person_id: "EMP-003", amount: 3300, currency: "USD", direction: "OUTGOING", counterparty: "SecureHome Monitoring", transaction_time: "2025-03-09 08:00:00", description: "Home security subscription", reference: "TR-PERS", suspicious: 0 },
+   244→        { transaction_id: "TXN-20010", account_holder: "Sofia Martinez", person_id: "EMP-004", amount: 1200, currency: "USD", direction: "OUTGOING", counterparty: "CloudSigma Hosting", transaction_time: "2025-03-07 09:30:00", description: "Personal hosting account", reference: "TR-PERS", suspicious: 0 },
+   245→        // Some legitimately-suspicious-flagged noise (red herrings)
+   246→        { transaction_id: "TXN-20011", account_holder: "Tomas Reyes", person_id: "EMP-009", amount: 9800, currency: "USD", direction: "INCOMING", counterparty: "Upwork Freelance", transaction_time: "2025-03-02 22:10:00", description: "Side project payment", reference: "TR-PERS", suspicious: 1 },
+   247→        { transaction_id: "TXN-20012", account_holder: "Victor Sato", person_id: "EMP-011", amount: 4500, currency: "USD", direction: "INCOMING", counterparty: "RefurbCo", transaction_time: "2025-02-25 19:00:00", description: "Surplus equipment resale", reference: "TR-PERS", suspicious: 1 },
+   248→        { transaction_id: "TXN-20013", account_holder: "Nadia Kim", person_id: "EMP-013", amount: 3200, currency: "USD", direction: "INCOMING", counterparty: "EduPro Tutoring", transaction_time: "2025-02-18 20:30:00", description: "Evening tutoring income", reference: "TR-PERS", suspicious: 1 },
+   249→        // A legitimate vendor payment that LOOKS like TR-4817 but is a different reference (TR-4820)
+   250→        { transaction_id: "TXN-20014", account_holder: "Nexora Systems", person_id: "EMP-013", amount: 8800, currency: "USD", direction: "OUTGOING", counterparty: "Northgate Logistics", transaction_time: "2025-02-14 12:00:00", description: "Logistics retainer - invoice NG-440", reference: "TR-4820", suspicious: 0 },
+   251→        { transaction_id: "TXN-20015", account_holder: "Nexora Systems", person_id: "EMP-013", amount: 8800, currency: "USD", direction: "OUTGOING", counterparty: "Northgate Logistics", transaction_time: "2025-03-14 12:00:00", description: "Logistics retainer - invoice NG-441", reference: "TR-4820", suspicious: 0 },
+   252→        { transaction_id: "TXN-20016", account_holder: "Nexora Systems", person_id: "EMP-013", amount: 11200, currency: "USD", direction: "OUTGOING", counterparty: "Harborview IT Services", transaction_time: "2025-02-22 10:30:00", description: "IT managed services - invoice HV-9912", reference: "TR-4821", suspicious: 0 },
+   253→        { transaction_id: "TXN-20017", account_holder: "Nexora Systems", person_id: "EMP-013", amount: 11200, currency: "USD", direction: "OUTGOING", counterparty: "Harborview IT Services", transaction_time: "2025-03-14 10:30:00", description: "IT managed services - invoice HV-9913", reference: "TR-4821", suspicious: 0 },
+   254→      ],
+   255→    },
+   256→
+   257→    // ---------- MESSAGES (19 rows) — MESSAGE THREAD ----------
+   258→    // Fragments requiring interpretation. Never says "Maya will kill me."
+   259→    {
+   260→      name: "messages",
+   261→      rows: [
+   262→        // Elias to Priya (auditor) — pulling the vendor ledger, mentions TR-4817
+   263→        { message_id: "M-3001", sender_id: "EMP-001", sender_name: "Elias Voss", receiver_id: "EMP-006", receiver_name: "Priya Nair", sent_time: T(10, 8), content: "Priya, pull every payment tagged with reference TR-4817 from the last 90 days. Vendor payments only. Don't flag the file in the system - run it off my terminal.", message_type: "EMAIL", read_status: "READ" },
+   264→        { message_id: "M-3002", sender_id: "EMP-006", sender_name: "Priya Nair", receiver_id: "EMP-001", receiver_name: "Elias Voss", sent_time: T(11, 35), content: "Pulled. Fourteen line items, all small, spread across five vendors. Total is sizeable. Authorising signatory on every one is the same person. Sending the file separately.", message_type: "EMAIL", read_status: "READ" },
+   265→        { message_id: "M-3003", sender_id: "EMP-001", sender_name: "Elias Voss", receiver_id: "EMP-006", receiver_name: "Priya Nair", sent_time: T(11, 52), content: "I see it. Don't speak to anyone about this. Not finance, not the board. Especially not her.", message_type: "EMAIL", read_status: "READ" },
+   266→
+   267→        // Elias to Maya — arranging the archive meeting (confrontation setup, vague)
+   268→        { message_id: "M-3004", sender_id: "EMP-001", sender_name: "Elias Voss", receiver_id: "EMP-002", receiver_name: "Maya Chen", sent_time: T(20, 45), content: "Maya. I need to walk you through something in person. Tonight, 10:30, the Archive. Bring your badge. No need to loop in the auditors - I'd rather settle this between us first.", message_type: "EMAIL", read_status: "READ" },
+   269→        { message_id: "M-3005", sender_id: "EMP-002", sender_name: "Maya Chen", receiver_id: "EMP-001", receiver_name: "Elias Voss", sent_time: T(20, 48), content: "Of course. I'll be there. Should I bring the Q1 vendor file?", message_type: "EMAIL", read_status: "READ" },
+   270→        { message_id: "M-3006", sender_id: "EMP-001", sender_name: "Elias Voss", receiver_id: "EMP-002", receiver_name: "Maya Chen", sent_time: T(20, 49), content: "I have the file. Just be there.", message_type: "EMAIL", read_status: "READ" },
+   271→
+   272→        // Maya to Daniel — coordination (vague, incriminating only in hindsight)
+   273→        { message_id: "M-3007", sender_id: "EMP-002", sender_name: "Maya Chen", receiver_id: "EMP-003", receiver_name: "Daniel Brooks", sent_time: T(21, 15), content: "He knows. He pulled the TR-4817 file. We're meeting at the Archive at 10:30. I need the room dark.", message_type: "SMS", read_status: "READ" },
+   274→        { message_id: "M-3008", sender_id: "EMP-003", sender_name: "Daniel Brooks", receiver_id: "EMP-002", receiver_name: "Maya Chen", sent_time: T(21, 18), content: "How dark.", message_type: "SMS", read_status: "READ" },
+   275→        { message_id: "M-3009", sender_id: "EMP-002", sender_name: "Maya Chen", receiver_id: "EMP-003", receiver_name: "Daniel Brooks", sent_time: T(21, 19), content: "CAM-04. Routine maintenance window. I'll handle the rest.", message_type: "SMS", read_status: "READ" },
+   276→        { message_id: "M-3010", sender_id: "EMP-002", sender_name: "Maya Chen", receiver_id: "EMP-003", receiver_name: "Daniel Brooks", sent_time: T(22, 9), content: "Coming back in. East side.", message_type: "SMS", read_status: "READ" },
+   277→
+   278→        // Maya's separation/budget friction (red herrings, plausible alternate motive)
+   279→        { message_id: "M-3011", sender_id: "EMP-002", sender_name: "Maya Chen", receiver_id: "EMP-001", receiver_name: "Elias Voss", sent_time: T(17, 10), content: "Elias, blocking the Q2 infrastructure budget is going to force layoffs. This is a mistake and I won't have my name attached to it.", message_type: "EMAIL", read_status: "READ" },
+   280→        { message_id: "M-3012", sender_id: "EMP-001", sender_name: "Elias Voss", receiver_id: "EMP-002", receiver_name: "Maya Chen", sent_time: T(17, 25), content: "Maya, the numbers don't support the spend. We'll revisit in Q3. Please work with Anika on the separation terms if you still intend to resign.", message_type: "EMAIL", read_status: "READ" },
+   281→
+   282→        // Sofia's frustration (red herring)
+   283→        { message_id: "M-3013", sender_id: "EMP-004", sender_name: "Sofia Martinez", receiver_id: "EMP-009", receiver_name: "Tomas Reyes", sent_time: T(20, 15), content: "Two years and they pass me over for Staff again. I'm done covering for this place.", message_type: "INTERNAL", read_status: "READ" },
+   284→
+   285→        // Ryan's complaint (red herring)
+   286→        { message_id: "M-3014", sender_id: "EMP-005", sender_name: "Ryan Cole", receiver_id: "EMP-001", receiver_name: "Elias Voss", sent_time: T(11, 30), content: "Elias, the night shift is running on skeleton crew. This is unsafe. If something happens on my watch, that's on you.", message_type: "EMAIL", read_status: "READ" },
+   287→
+   288→        // Routine
+   289→        { message_id: "M-3015", sender_id: "EMP-006", sender_name: "Priya Nair", receiver_id: "EMP-002", receiver_name: "Maya Chen", sent_time: T(14, 5), content: "Audit draft is ready for your review. Nothing material flagged in Q1.", message_type: "EMAIL", read_status: "READ" },
+   290→        { message_id: "M-3016", sender_id: "EMP-012", sender_name: "Helen Park", receiver_id: "EMP-001", receiver_name: "Elias Voss", sent_time: T(16, 30), content: "The Meridian Capital acquisition docs are signed and counter-filed. Escrow funded.", message_type: "EMAIL", read_status: "READ" },
+   291→        { message_id: "M-3017", sender_id: "EMP-007", sender_name: "Marcus Webb", receiver_id: "EMP-003", receiver_name: "Daniel Brooks", sent_time: T(15, 45), content: "Shift handover complete. Camera 4 had a flicker earlier, might want to check the feed routing.", message_type: "INTERNAL", read_status: "READ" },
+   292→        { message_id: "M-3018", sender_id: "EMP-011", sender_name: "Victor Sato", receiver_id: "EMP-005", receiver_name: "Ryan Cole", sent_time: T(13, 20), content: "Loading bay door 3 needs servicing. I'll lock it out tonight.", message_type: "INTERNAL", read_status: "READ" },
+   293→        // Daniel to Maya after the deed - vague confirmation
+   294→        { message_id: "M-3019", sender_id: "EMP-003", sender_name: "Daniel Brooks", receiver_id: "EMP-002", receiver_name: "Maya Chen", sent_time: T(23, 8), content: "Done. Drive safe.", message_type: "SMS", read_status: "READ" },
+   295→      ],
+   296→    },
+   297→
+   298→    // ---------- SECURITY_LOGS (22 rows) — SECURITY THREAD ----------
+   299→    // Daniel (accomplice) disables CAM-04 at Maya's request.
+   300→    // The terminal is wiped afterwards (by Maya, inside the archive).
+   301→    {
+   302→      name: "security_logs",
+   303→      rows: [
+   304→        // THE KEY: camera disabled by Daniel at 22:30
+   305→        { log_id: "SL-9001", timestamp: T(22, 30, 12), event_type: "CAMERA_DISABLED", location_id: "LOC-04", location_name: "Archive", person_id: "EMP-003", actor_name: "Daniel Brooks", details: "Camera CAM-04 manually disabled from Security Control Room by admin user d.brooks. Reason logged: MAINTENANCE.", severity: "CRITICAL" },
+   306→        { log_id: "SL-9002", timestamp: T(22, 30, 14), event_type: "CAMERA_STATUS", location_id: "LOC-04", location_name: "Archive", person_id: "EMP-003", actor_name: "Daniel Brooks", details: "CAM-04 feed terminated. Recording halted.", severity: "WARNING" },
+   307→
+   308→        // Door access events
+   309→        { log_id: "SL-9003", timestamp: T(22, 35, 5), event_type: "DOOR_ACCESS", location_id: "LOC-04", location_name: "Archive", person_id: "EMP-001", actor_name: "Elias Voss", details: "Badge EV-0010 granted access to Archive (RESTRICTED).", severity: "INFO" },
+   310→        // *** MAYA ENTERS THE ARCHIVE using her CFO badge (she has restricted access for finance vault) ***
+   311→        { log_id: "SL-9004", timestamp: T(22, 41, 9), event_type: "DOOR_ACCESS", location_id: "LOC-04", location_name: "Archive", person_id: "EMP-002", actor_name: "Maya Chen", details: "Badge MC-4471 granted access to Archive (RESTRICTED). Override: FINANCE_VAULT.", severity: "WARNING" },
+   312→        // *** TERMINAL WIPED — authenticated as Maya (she is inside the archive at this time) ***
+   313→        { log_id: "SL-9005", timestamp: T(22, 50, 41), event_type: "TERMINAL_WIPE", location_id: "LOC-04", location_name: "Archive", person_id: "EMP-002", actor_name: "Maya Chen", details: "Archive workstation ARC-TERM-02 issued full disk wipe command. Authenticated as m.chen from local console.", severity: "CRITICAL" },
+   314→        { log_id: "SL-9006", timestamp: T(22, 54, 7), event_type: "DOOR_EXIT", location_id: "LOC-04", location_name: "Archive", person_id: "EMP-002", actor_name: "Maya Chen", details: "Badge MC-4471 exited Archive.", severity: "INFO" },
+   315→
+   316→        // Maya re-entered the building via the Side Entrance at 22:18
+   317→        { log_id: "SL-9007", timestamp: T(22, 18, 22), event_type: "DOOR_ACCESS", location_id: "LOC-11", location_name: "Side Entrance", person_id: "EMP-002", actor_name: "Maya Chen", details: "Badge MC-4471 granted access at Side Entrance (STAFF). No guard on duty.", severity: "INFO" },
+   318→        { log_id: "SL-9008", timestamp: T(22, 58, 3), event_type: "DOOR_EXIT", location_id: "LOC-11", location_name: "Side Entrance", person_id: "EMP-002", actor_name: "Maya Chen", details: "Badge MC-4471 exited Side Entrance.", severity: "INFO" },
+   319→
+   320→        // Body discovery
+   321→        { log_id: "SL-9009", timestamp: T(23, 47, 2), event_type: "DOOR_ACCESS", location_id: "LOC-04", location_name: "Archive", person_id: "EMP-005", actor_name: "Ryan Cole", details: "Badge RC-5512 granted access to Archive. Manual perimeter check.", severity: "INFO" },
+   322→        { log_id: "SL-9010", timestamp: T(23, 52, 30), event_type: "ALARM_TRIGGERED", location_id: "LOC-04", location_name: "Archive", person_id: "EMP-005", actor_name: "Ryan Cole", details: "Manual panic alarm triggered from Archive. Body of Elias Voss discovered. EMS contacted.", severity: "CRITICAL" },
+   323→
+   324→        // Routine logs (noise)
+   325→        { log_id: "SL-9101", timestamp: T(8, 0, 0), event_type: "SYSTEM_START", location_id: "LOC-06", location_name: "Security Control Room", person_id: "SYSTEM", actor_name: "Security System", details: "Daily security system startup. All cameras nominal.", severity: "INFO" },
+   326→        { log_id: "SL-9102", timestamp: T(8, 5, 0), event_type: "CAMERA_STATUS", location_id: "LOC-04", location_name: "Archive", person_id: "SYSTEM", actor_name: "Security System", details: "CAM-04 nominal. Recording active.", severity: "INFO" },
+   327→        { log_id: "SL-9103", timestamp: T(16, 0, 0), event_type: "SHIFT_CHANGE", location_id: "LOC-06", location_name: "Security Control Room", person_id: "EMP-007", actor_name: "Marcus Webb", details: "Day shift ended. Handover to D. Brooks.", severity: "INFO" },
+   328→        { log_id: "SL-9104", timestamp: T(18, 12, 0), event_type: "DOOR_ACCESS", location_id: "LOC-01", location_name: "Lobby", person_id: "EMP-001", actor_name: "Elias Voss", details: "Badge EV-0010 building entry.", severity: "INFO" },
+   329→        { log_id: "SL-9105", timestamp: T(19, 0, 0), event_type: "DOOR_ACCESS", location_id: "LOC-01", location_name: "Lobby", person_id: "EMP-004", actor_name: "Sofia Martinez", details: "Badge SM-3390 building entry.", severity: "INFO" },
+   330→        { log_id: "SL-9106", timestamp: T(21, 0, 0), event_type: "DOOR_EXIT", location_id: "LOC-08", location_name: "Parking Garage", person_id: "EMP-002", actor_name: "Maya Chen", details: "Badge MC-4471 exited parking garage. Vehicle departed.", severity: "INFO" },
+   331→        { log_id: "SL-9107", timestamp: T(23, 20, 0), event_type: "DOOR_EXIT", location_id: "LOC-01", location_name: "Lobby", person_id: "EMP-004", actor_name: "Sofia Martinez", details: "Badge SM-3390 building exit.", severity: "INFO" },
+   332→        { log_id: "SL-9108", timestamp: T(23, 15, 0), event_type: "REMOTE_LOGIN", location_id: "LOC-05", location_name: "Server Room", person_id: "EMP-004", actor_name: "Sofia Martinez", details: "Remote admin session opened to deploy server. IP authenticated from internal Engineering Lab terminal.", severity: "INFO" },
+   333→        { log_id: "SL-9109", timestamp: T(13, 0, 0), event_type: "CAMERA_STATUS", location_id: "LOC-08", location_name: "Parking Garage", person_id: "SYSTEM", actor_name: "Security System", details: "CAM-08 brief signal loss. Auto-recovered.", severity: "INFO" },
+   334→        { log_id: "SL-9110", timestamp: T(7, 45, 0), event_type: "DOOR_ACCESS", location_id: "LOC-10", location_name: "Loading Bay", person_id: "EMP-011", actor_name: "Victor Sato", details: "Badge VS-3344 early access for deliveries.", severity: "INFO" },
+   335→        { log_id: "SL-9111", timestamp: T(10, 12, 0), event_type: "AUTH_SUCCESS", location_id: "LOC-07", location_name: "Finance Office", person_id: "EMP-001", actor_name: "Elias Voss", details: "Elias Voss authenticated to vendor ledger system. Exported reference TR-4817 records.", severity: "INFO" },
+   336→        { log_id: "SL-9112", timestamp: T(20, 46, 0), event_type: "AUTH_SUCCESS", location_id: "LOC-02", location_name: "Executive Office", person_id: "EMP-001", actor_name: "Elias Voss", details: "Elias Voss authenticated to corporate email from Executive Office terminal.", severity: "INFO" },
+   337→      ],
+   338→    },
+   339→
+   340→    // ---------- EVIDENCE (12 rows) — physical / catalog ----------
+   341→    {
+   342→      name: "evidence",
+   343→      rows: [
+   344→        { evidence_id: "EVD-001", name: "Reference TR-4817 in Audit Notes", description: "A handwritten reference 'TR-4817' was found in Elias Voss's personal audit notebook near the Archive terminal. No further context — the player must search the database to determine what TR-4817 represents.", location_found: "Archive (Elias's notebook)", found_time: "2025-03-15 02:10:00", category: "PHYSICAL", significance: "The starting clue. TR-4817 is a reference code that recurs across many small transactions and several messages.", related_suspect: null, related_person_id: "EMP-001" },
+   345→        { evidence_id: "EVD-002", name: "Disabled Camera Feed", description: "Archive security camera CAM-04 was manually disabled at 22:30:12, approximately 10 minutes before the estimated time of death. The disable command was authenticated by admin user d.brooks.", location_found: "Security Control Room (log)", found_time: "2025-03-14 22:30:12", category: "DIGITAL", significance: "Establishes premeditation and an accomplice. The camera was disabled from the Security Control Room, not from inside the Archive.", related_suspect: "S002", related_person_id: "EMP-003" },
+   346→        { evidence_id: "EVD-003", name: "Maya's Archive Access", description: "Badge MC-4471 (Maya Chen) accessed the Archive at 22:41:09 and exited at 22:54:07 — during the estimated time of death. Maya's stated alibi was that she left the building at 21:00.", location_found: "Archive door access log", found_time: "2025-03-14 22:41:09", category: "DIGITAL", significance: "Places Maya at the scene during the time of death and contradicts her stated alibi.", related_suspect: "S001", related_person_id: "EMP-002" },
+   347→        { evidence_id: "EVD-004", name: "Maya's Return to the Building", description: "Badge MC-4471 (Maya Chen) re-entered the building via the Side Entrance at 22:18:22 — after her badge had exited the Parking Garage at 21:00. Maya had supposedly driven home.", location_found: "Side Entrance access log", found_time: "2025-03-14 22:18:22", category: "DIGITAL", significance: "Direct contradiction of Maya's alibi. She returned to the building secretly via the unguarded side entrance.", related_suspect: "S001", related_person_id: "EMP-002" },
+   348→        { evidence_id: "EVD-005", name: "Wiped Archive Terminal", description: "Archive workstation ARC-TERM-02 received a full disk wipe command at 22:50:41, authenticated as m.chen from the local console. This destroyed local records of what was reviewed during the meeting.", location_found: "Archive (ARC-TERM-02)", found_time: "2025-03-14 22:50:41", category: "DIGITAL", significance: "Maya was inside the Archive at the time of the wipe. Indicates an attempt to destroy evidence of the motive.", related_suspect: "S001", related_person_id: "EMP-002" },
+   349→        { evidence_id: "EVD-006", name: "TR-4817 Financial Pattern", description: "Aggregating all transactions tagged with reference TR-4817 reveals 14 line items totalling approximately $69,300 in outgoing vendor payments and $12,400 in incoming kickbacks — all authorised by the same signatory, all routed through five shell vendors, with kickbacks landing in Maya Chen's personal account.", location_found: "Financial ledger (audit)", found_time: "2025-03-14 10:08:00", category: "FINANCIAL", significance: "Provides motive: embezzlement. The pattern only becomes visible when transactions are aggregated by reference code.", related_suspect: "S001", related_person_id: "EMP-002" },
+   350→        { evidence_id: "EVD-007", name: "Elias's Confrontation Invitation", description: "Email chain between Elias Voss and Maya Chen at 20:45–20:49. Elias requests a private meeting at the Archive at 22:30 'to walk you through something' and references a file he already has. Maya agrees.", location_found: "Email server", found_time: "2025-03-14 20:45:00", category: "DIGITAL", significance: "Establishes that Elias arranged the meeting and was already in possession of the evidence — Maya was being confronted.", related_suspect: "S001", related_person_id: "EMP-002" },
+   351→        { evidence_id: "EVD-008", name: "Maya-Daniel Coordination", description: "SMS chain between Maya Chen and Daniel Brooks between 21:15 and 22:09. Maya writes 'He knows. He pulled the TR-4817 file... I need the room dark.' Daniel asks 'How dark.' Maya replies 'CAM-04.' Later: 'Coming back in. East side.'", location_found: "SMS gateway", found_time: "2025-03-14 21:15:00", category: "DIGITAL", significance: "Establishes Daniel as accomplice (disabled the camera) and Maya as the principal (returned to the building, entered the Archive).", related_suspect: "S001", related_person_id: "EMP-002" },
+   352→        { evidence_id: "EVD-009", name: "Cause of Death", description: "Preliminary forensic report: asphyxiation by manual strangulation. No defensive wounds. Consistent with a victim caught off guard by a trusted individual.", location_found: "Archive (body)", found_time: "2025-03-15 01:30:00", category: "FORENSIC", significance: "Confirms homicide and suggests the victim knew and did not fear the killer — consistent with Maya, whom Elias had invited.", related_suspect: null, related_person_id: "EMP-001" },
+   353→        { evidence_id: "EVD-010", name: "Missing Phone", description: "Elias Voss's mobile phone has not been recovered. Last signal registered at 22:51 near the Archive.", location_found: "Archive (last ping)", found_time: "2025-03-14 22:51:00", category: "PHYSICAL", significance: "Likely removed by the killer to suppress communications. The wipe of the terminal and removal of the phone happened within seconds of each other.", related_suspect: "S001", related_person_id: "EMP-002" },
+   354→        { evidence_id: "EVD-011", name: "Maya's Authorising Signatory", description: "Every transaction tagged with reference TR-4817 carries the same authorising signatory: Maya Chen (CFO). No other employee authorised any TR-4817 payment.", location_found: "Vendor ledger (audit)", found_time: "2025-03-14 11:35:00", category: "FINANCIAL", significance: "Ties the embezzlement directly to Maya — not to a vendor, not to another employee.", related_suspect: "S001", related_person_id: "EMP-002" },
+   355→        { evidence_id: "EVD-012", name: "Building Movement Log", description: "Complete badge access log showing all persons who entered and exited Nexora Systems on 2025-03-14. Establishes the full set of individuals present at the scene timeframe and reveals Maya's return.", location_found: "Building access system", found_time: "2025-03-14 23:59:00", category: "DIGITAL", significance: "The master movement record. Cross-referencing it reveals Maya's secret return and the contradiction with her alibi.", related_suspect: null, related_person_id: null },
+   356→      ],
+   357→    },
+   358→  ],
+   359→};
+   360→
