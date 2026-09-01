@@ -1,0 +1,420 @@
+     1→# SQL Murder Mystery — Worklog
+     2→
+     3→Project: Case #001 — THE MIDNIGHT ARCHIVE
+     4→Stack: Next.js 16, TypeScript, Tailwind, better-sqlite3, Monaco Editor, Zustand
+     5→
+     6→---
+     7→Task ID: 0
+     8→Agent: main
+     9→Task: Project setup and planning
+    10→
+    11→Work Log:
+    12→- Explored existing Next.js scaffold (shadcn/ui, Prisma, Zustand available)
+    13→- Installed @monaco-editor/react and better-sqlite3
+    14→- Verified better-sqlite3 native bindings work
+    15→- Designed murder mystery plot (victim Elias Voss, killer Daniel Brooks, motive: embezzlement/tech sale to Helix Dynamics, TR-4817 transaction)
+    16→- Designed 8-table SQLite schema: suspects, employees, locations, visits, calls, transactions, messages, security_logs, evidence
+    17→
+    18→Stage Summary:
+    19→- Murderer: Daniel Brooks (Head of Security)
+    20→- Motive: Elias discovered Daniel selling Nexora secrets to Helix Dynamics + embezzling (TR-4817 $480k payment)
+    21→- Method: Disabled archive camera (22:30), lured Elias to archive (22:05 call), killed him ~22:48, wiped computer, took phone
+    22→- Red herrings: Maya Chen (CFO, left 21:00), Sofia Martinez (engineer, floor 3), Ryan Cole (ops, discovered body)
+    23→
+    24→---
+    25→Task ID: 14
+    26→Agent: main
+    27→Task: End-to-end verification and bug fixing
+    28→
+    29→Work Log:
+    30→- Switched SQL engine from better-sqlite3 (native, crashed under Turbopack) to sql.js (pure WASM) — stable
+    31→- Fixed Zustand persist hydration mismatch (skipHydration + _hasHydrated guard + manual rehydrate)
+    32→- Fixed LandingPage boot-lines render crash (Cannot read 'startsWith' of undefined) with type guard filter
+    33→- Added ErrorBoundary for graceful error capture
+    34→- Fixed SQLEditor: runInternal ordering (ref-based), running state, lint (refs-during-render, hooks rules)
+    35→- Fixed HintPanel: renamed useHint->revealHint (hooks rule)
+    36→- Verified full golden path with Agent Browser:
+    37→  * Landing renders (dark forensic theme, boot log, CTA)
+    38→  * Case Introduction (cinematic beats, persons of interest, objective)
+    39→  * Investigation Dashboard (3-column layout, TopBar, sidebars)
+    40→  * SQL Editor (Monaco) + Run Query (Ctrl+Enter) executes against real SQLite
+    41→  * Query Results table (headers, row numbers, copy, count, exec time)
+    42→  * Empty result ("0 RECORDS FOUND"), error handling ("QUERY ERROR / Column does not exist"), unsafe blocking ("UNSAFE QUERY")
+    43→  * Evidence auto-discovery (TR-4817 query -> EVD-004 discovered in EvidencePanel)
+    44→  * Database Explorer (9 tables, expandable columns, filter, quick-query)
+    45→  * Query History (timing, row count, restore)
+    46→  * Notes panel (add/remove)
+    47→  * Final Accusation (WHO/HOW/WHY radio groups) -> Case Complete ("THE ARCHIVE SPEAKS")
+    48→- Verified responsive: tablet (1024) and mobile (414) reorganize with CASE/EVIDENCE drawers
+    49→- Lint clean (0 errors)
+    50→
+    51→Stage Summary:
+    52→- Full game loop verified working end-to-end via Agent Browser
+    53→- sql.js WASM engine stable for realistic single-user pacing
+    54→- All required features implemented and tested
+    55→
+    56→---
+    57→Task ID: 15
+    58→Agent: main
+    59→Task: Transform mystery — Maya Chen as killer, story emerges from database relationships
+    60→
+    61→Work Log:
+    62→- Redesigned seed DB (scripts/seed-investigation.ts) with Maya=killer, Daniel=accomplice:
+    63→  * TR-4817 as a recurring reference across 14 small transactions (9 outgoing vendor payments + 5 incoming kickbacks to Maya's personal account), totalling ~$60k. Pattern only visible via aggregation (GROUP BY, COUNT, SUM).
+    64→  * Maya's movement contradiction: exits Parking Garage 21:05, re-enters via Side Entrance 22:18, enters Archive 22:41 (during TOD), exits 22:54.
+    65→  * Maya-Daniel coordination: 3 calls + 5 SMS chain ("He knows. He pulled the TR-4817 file... I need the room dark." / "CAM-04." / "Coming back in. East side." / "Done. Drive safe.")
+    66→  * Camera disabled by Daniel at 22:30 (accomplice); terminal wiped by Maya at 22:50 (principal).
+    67→  * Red herrings: Sofia (remote admin, promotion denied), Ryan (found body, staffing complaint), Tomas/Victor/Nadia (suspicious-flagged personal transactions).
+    68→  * Converted seed to use sql.js (positional ? params) since better-sqlite3 was removed.
+    69→- Updated engine schema metadata: transactions.reference column description.
+    70→- Updated caseData.ts:
+    71→  * New suspects bios (Maya=killer, Daniel=accomplice with undisclosed relationship)
+    72→  * 10 knowledge-based objectives grouped by thread (MOVEMENT, COMMUNICATION, FINANCIAL, SECURITY, MESSAGES, ACCUSATION) — parallel, non-linear
+    73→  * 10 investigation leads with starter queries (non-linear suggested questions)
+    74→  * 8 hints with thread tags, unlocked by evidence discovery
+    75→  * New accusation options: HOW=M_RETURN_ARCHIVE, WHY=M_EMBEZZLEMENT
+    76→  * Rewrote EVIDENCE_TRIGGERS to be content-based (not exact-string): detect person/time/location in result rows, semantic SQL patterns, aggregation results. Different valid queries uncover same evidence.
+    77→- Updated evidence catalog (12 items) reflecting Maya as killer.
+    78→- Updated accusation API: CORRECT = {who:S001, how:M_RETURN_ARCHIVE, why:M_EMBEZZLEMENT}
+    79→- Updated CaseComplete narrative (Maya embezzlement, Daniel accomplice, full reconstruction)
+    80→- Added InvestigationLeads panel (suggested questions with starter queries, thread tags)
+    81→- Enhanced InvestigationNotes: edit notes + suspect tagging (MAYA/DANIEL/SOFIA/RYAN with color-coded tags)
+    82→- Updated InvestigationProgress: objectives grouped by investigation thread with color-coded tags
+    83→- Updated HintPanel: thread tags on each hint
+    84→- Updated InvestigationDashboard: 4 right-sidebar tabs (Evidence/Leads/Progress/Hints)
+    85→- Added updateNote to game store
+    86→
+    87→Verification (direct engine test — bypasses unstable dev server):
+    88→- Path A (Movements→Maya→transactions→security): all queries return correct data, evidence triggers fire (EVD-003, EVD-004, EVD-001, EVD-006, EVD-002, EVD-005)
+    89→- Path B (Messages→TR-4817→transactions): EVD-007, EVD-001, EVD-008 fire
+    90→- Path C (Calls→Daniel→security→Maya): EVD-008 fires on both SMS and calls
+    91→- Accusation API: Maya/Return/Embezzlement = correct (3/3); wrong answers = 0/3
+    92→- Error handling: bad column, unsafe query, empty result all work
+    93→- Lint clean (0 errors)
+    94→
+    95→Stage Summary:
+    96→- Mystery now emerges from database relationships, not a single query
+    97→- TR-4817 is a multi-record financial pattern requiring aggregation to uncover
+    98→- Parallel investigation threads (Movements/Communications/Financial/Security/Messages) all converge on Maya
+    99→- Daniel is accomplice (camera), Maya is principal (archive entry, terminal wipe, financial motive)
+   100→- Evidence engine is content-based — different valid SQL queries can uncover the same evidence
+   101→- No single query exposes the murderer; player must connect multiple independent pieces
+   102→
+   103→---
+   104→Task ID: 16
+   105→Agent: main
+   106→Task: Final verification of transformed mystery
+   107→
+   108→Work Log:
+   109→- Ran direct engine test (scripts/test-engine.ts): all 3 investigation paths return correct data
+   110→- Ran evidence trigger test (scripts/test-evidence-triggers.ts): all triggers fire correctly
+   111→  * Path A: Maya movements → EVD-003, EVD-004; TR-4817 → EVD-001, EVD-006; camera → EVD-002; wipe → EVD-005
+   112→  * Path B: Elias messages → EVD-007; TR-4817 messages → EVD-001, EVD-008
+   113→  * Path C: Maya-Daniel SMS → EVD-008; Maya-Daniel calls → EVD-008
+   114→  * Fixed EVD-003 (semantic SQL detection for Maya+Archive queries without location_name in SELECT)
+   115→  * Fixed EVD-008 (extended to also fire on Maya-Daniel calls, not just SMS)
+   116→- Tested accusation API: Maya/Return/Embezzlement = correct (3/3); wrong = 0/3
+   117→- Verified UI via Agent Browser:
+   118→  * Landing → Briefing → Dashboard flow works
+   119→  * Default query (SELECT * FROM suspects) executes and shows 4 suspects including Maya Chen
+   120→  * Right sidebar shows 4 tabs: EVIDENCE, LEADS, PROGRESS, HINTS
+   121→  * Leads panel shows 10 suggested questions with color-coded thread tags and starter queries
+   122→  * Dark forensic theme renders well (VLM confirmed: "clean and logical... polished and fully functional")
+   123→- Lint clean (0 errors)
+   124→
+   125→Stage Summary:
+   126→- Mystery fully transformed: Maya Chen is the killer, Daniel Brooks is the accomplice
+   127→- Story emerges from database relationships across 6 parallel investigation threads
+   128→- TR-4817 is a multi-record financial pattern requiring aggregation to uncover
+   129→- Evidence engine is content-based — different valid SQL queries uncover the same evidence
+   130→- All 3 test paths (A/B/C) verified working end-to-end through the database
+   131→- No single query exposes the murderer; player must connect multiple independent pieces
+   132→
+   133→---
+   134→Task ID: 17
+   135→Agent: main
+   136→Task: SQL learning experience — contextual feedback, 3-level hints, evidence board, timeline, profiles, accusation gate
+   137→
+   138→Work Log:
+   139→- Built SQL concept analyzer (src/lib/sql/analyzer.ts): deterministic tokenizer detecting 26 SQL concepts (SELECT, WHERE, BETWEEN, GROUP BY, JOIN, etc.), classifies into BEGINNER/INTERMEDIATE/AGGREGATION/ADVANCED levels, picks most educational insight. Fixed ALIAS false-positive (now only matches table aliases on FROM/JOIN with AS or short 1-2 letter alias).
+   140→- Updated types: QueryHistoryItem gains concepts+level fields; GameState gains learnedConcepts, shownInsights, timeline; HintItem gains level; AccusationRecord gains evidence+evidenceCoverage.
+   141→- Updated store: recordConcepts (+5/concept bonus), markInsightShown, addTimelineEvent, useHint(objectiveId, level) for 3-level progressive hints, store version bumped to 2.
+   142→- Rewrote caseData OBJECTIVES with 3-level hints each: L1=investigative direction, L2=database direction, L3=SQL concept direction. Never reveals the complete query.
+   143→- Built contextual SQL insight (SqlInsight.tsx): subtle footer below results showing "YOU USED: {concept}" + 1-line explanation. Auto-dismisses after 7s. Only shows for new concepts (tracked in shownInsights).
+   144→- Enhanced error experience (QueryResults.tsx): added SQL Tip section per error kind (column/table/syntax/unsafe). Empty results now show "NO RECORDS FOUND" + investigative note ("An empty result can be evidence too").
+   145→- Built evidence discovery cinematic notification (EvidenceToast.tsx): fixed top-center toast with "NEW EVIDENCE DISCOVERED" + name + category + +100, auto-dismisses after 5.5s.
+   146→- Enhanced evidence catalog with source, foundTime, relatedSuspect, relatedEvidence, accusationDimension (identity/opportunity/motive/supporting). 6 categories with color-coded metadata.
+   147→- Built Evidence Board (EvidenceBoard.tsx): evidence grouped by 6 categories, click discovered evidence to open inspector modal showing description/significance/source/found-time/related-suspect/related-evidence links.
+   148→- Built Investigation Timeline (InvestigationTimeline.tsx): chronological vertical timeline, only shows discovered events (auto-added when evidence is discovered via getTimelineEventForEvidence mapping).
+   149→- Built Suspect Profiles (SuspectProfiles.tsx): per-suspect cards showing known info + discovered evidence count + player notes count. Click to open detail modal. No suspicion percentage.
+   150→- Rewrote HintPanel for 3-level progressive hints: expandable per-objective, L2 requires L1, L3 requires L2, each -25 pts.
+   151→- Updated TopBar accusation dialog: evidence-coverage gate (identity+opportunity+motive+supporting all required), multi-evidence selection (checkboxes for all discovered evidence), "CASE THEORY INCOMPLETE" feedback on wrong answer.
+   152→- Updated CaseComplete: added "What You Learned" educational summary showing each SQL concept used with its hint, plus the closing line "You didn't learn SQL so you could play the game. You learned SQL because you needed it to solve the murder."
+   153→- Updated QueryHistory: shows concept tags per query + level badge.
+   154→- Updated InvestigationProgress: added SQL Concepts Used section showing all 21 trackable concepts with used/unused styling.
+   155→- Dashboard now has 6 left tabs (Brief/Suspects/Profiles/Database/Notes/History) and 6 right tabs (Evidence/Board/Timeline/Leads/Progress/Hints).
+   156→- Fixed all lint errors (setState-in-effect rule resolved via rAF + early-return pattern).
+   157→- Re-seeded DB with new schema (transactions.reference column).
+   158→
+   159→Verification:
+   160→- SQL analyzer tested directly: correctly identifies concepts and levels for 6 test queries (BEGINNER→ADVANCED), picks appropriate insights (BETWEEN, GROUP BY, INNER JOIN, LIMIT, DISTINCT).
+   161→- Evidence triggers tested directly: all paths fire correctly (Path A/B/C).
+   162→- Agent Browser verified: Landing→Briefing→Dashboard flow works; default query executes; Evidence Board renders with 6 categories + locked undiscovered cards; Timeline shows empty state; Suspect Profiles shows all 4 suspects with evidence/notes counts; Accusation dialog shows coverage gate (Identity/Opportunity/Motive/Supporting) + WHO/HOW/WHY + multi-evidence selector.
+   163→- Lint clean (0 errors).
+   164→
+   165→Stage Summary:
+   166→- Player learns SQL because they need it to solve the murder (not a tutorial)
+   167→- Contextual insights appear subtly after successful queries using new concepts
+   168→- 3-level progressive hints per objective (investigative→database→SQL)
+   169→- Evidence board, timeline, and suspect profiles let the player build their own mental model
+   170→- Accusation requires evidence coverage across 4 dimensions + multi-evidence selection
+   171→- Final educational summary shows concepts used in investigation context
+   172→- Detective experience is primary; SQL learning is secondary and emergent
+   173→
+   174→---
+   175→Task ID: SEED-001
+   176→Agent: general-purpose
+   177→Task: Create Case #001 database seed module
+   178→
+   179→Work Log:
+   180→- Read prior worklog and existing case-001 story structure (metadata, suspects, objectives, leads, evidence, timeline, accusation, solution, triggers modules already present).
+   181→- Created /home/z/my-project/src/stories/case-001/database.ts exporting `CASE_001_DATABASE: InvestigationDatabaseSeed`.
+   182→- Ported ALL investigation data verbatim from scripts/seed-investigation.ts (lines 165–456) into the new typed module, organized as 9 SeedTable entries matching the shared schema:
+   183→  * suspects (4 rows) — Maya/Daniel/Sofia/Ryan
+   184→  * employees (13 rows) — victim + non-suspects
+   185→  * locations (11 rows) — Lobby → Side Entrance
+   186→  * visits (27 rows) — movement thread; Maya's secret return at 22:18 + Archive entry at 22:41
+   187→  * calls (15 rows) — communication thread; Maya↔Daniel coordination calls
+   188→  * transactions (31 rows) — financial thread; TR-4817 across 14 small payments + 17 noise rows
+   189→  * messages (19 rows) — message thread; Elias→Priya audit, Elias→Maya confrontation setup, Maya↔Daniel SMS chain
+   190→  * security_logs (22 rows) — security thread; CAM-04 disabled by Daniel at 22:30:12, terminal wipe by Maya at 22:50:41
+   191→  * evidence (12 rows) — physical/digital/forensic/financial catalog
+   192→- Preserved the `T(h, m, s=0)` timestamp helper at the top of the file and used it for all visit/call/message/log timestamps exactly as in the seed script. Added TypeScript types to the helper params: `(h: number, m: number, s = 0)`.
+   193→- File imports `InvestigationDatabaseSeed` from `@/stories/types` (type-only import).
+   194→- Verified by loading the module directly with node --experimental-strip-types:
+   195→  * Row counts match exactly: 4/13/11/27/15/31/19/22/12 (suspects/employees/locations/visits/calls/transactions/messages/security_logs/evidence)
+   196→  * TR-4817 transaction count = 14 (matches original sanity check)
+   197→  * T(22, 41) => "2025-03-14 22:41:00" ✓
+   198→  * T(22, 30, 12) => "2025-03-14 22:30:12" ✓
+   199→- No other files modified; no scripts executed that mutate state.
+   200→
+   201→Stage Summary:
+   202→- Case #001's investigation database is now available as a typed TypeScript module (`CASE_001_DATABASE`) ready for the engine's `Story.database` field, decoupling story data from the legacy sql.js seed script.
+   203→- All row data, comments, and the T() timestamp helper are byte-for-byte equivalent to the seed script, so engine behavior will match the previously-verified golden paths (A/B/C).
+   204→- Next step: a separate task can wire `CASE_001_DATABASE` into a case-001 `index.ts` that assembles the full `Story` object, and the engine can consume it to build an isolated in-memory SQLite database.
+   205→
+   206→---
+   207→Task ID: MULTI-001
+   208→Agent: main
+   209→Task: Transform single-story game into scalable multi-story platform with DLC support
+   210→
+   211→Work Log:
+   212→- Created Story type system (src/stories/types.ts): StoryMetadata, SuspectInfo, ObjectiveDefinition, LeadDefinition, EvidenceCatalogItem, EvidenceTrigger, TimelineEventDef, AccusationDefinition, StorySolution, InvestigationDatabaseSeed, Story
+   213→- Created story registry (src/stories/registry.ts): STORY_REGISTRY with listAll/listPlayable/getStory/getByStoryId
+   214→- Created story access abstraction (src/stories/access.ts): StoryAccessProvider interface + LocalStoryAccessProvider (FREE stories unlocked, PAID/COMING_SOON locked, DEV_UNLOCK_ALL flag for development)
+   215→- Created shared evidence metadata (src/stories/evidenceMeta.ts): EVIDENCE_CATEGORY_META + ACCUSATION_DIMENSIONS (reusable across stories)
+   216→- Migrated Case #001 into src/stories/case-001/:
+   217→  * metadata.ts, suspects.ts, objectives.ts (with 3-level hints), leads.ts, evidence.ts (catalog), triggers.ts (evidence triggers + discoverEvidenceFromResult helper), timeline.ts, accusation.ts, solution.ts (who/how/why + evidenceObjectiveMap + reconstruction), database.ts (all 154 seed rows)
+   218→  * index.ts assembles the full Story object
+   219→- Created Case #002 (The Glasshouse Protocol) — COMING_SOON placeholder metadata
+   220→- Created Case #003 (Dead Frequency) — COMING_SOON placeholder metadata
+   221→- Refactored SQL engine (src/lib/sql/engine.ts):
+   222→  * Removed fixed DB_PATH loading
+   223→  * Added getStoryDatabase(storyId) — creates an isolated in-memory SQLite DB from the story's seed data (shared schema + story-specific rows)
+   224→  * DB cache per storyId (only active story initialized)
+   225→  * executeQuery(storyId, sql) and getSchema(storyId) now require a storyId
+   226→  * releaseStoryDatabase(storyId) for cleanup
+   227→- Updated API routes:
+   228→  * /api/query POST accepts {sql, storyId}; GET accepts ?storyId=
+   229→  * /api/accuse POST accepts {storyId, who, how, why} — looks up solution from STORY_REGISTRY
+   230→- Refactored game store (src/lib/game/store.ts):
+   231→  * Story-scoped progress: progress[storyId] = {discoveredEvidence, queryHistory, notes, hints, completedObjectives, accusation, score, timeline, learnedConcepts, shownInsights, started, completed}
+   232→  * activeStoryId tracks the current story
+   233→  * selectStory(storyId) / exitToArchive() / resetActiveStory()
+   234→  * All per-story actions (addQuery, discoverEvidence, addNote, useHint, etc.) operate on the active story's progress
+   235→  * Selector hooks: useActiveStory, useDiscoveredEvidence, useQueryHistory, useNotes, useHints, useCompletedObjectives, useScore, useTimeline, useLearnedConcepts, useShownInsights, useAccusation
+   236→  * Store version bumped to 3
+   237→- Updated use-sql-query hook: passes storyId to API, uses story.evidenceTriggers + story.timeline + story.solution.evidenceObjectiveMap (no hardcoded Case #001 logic)
+   238→- Created CaseArchive component: case selection screen with cards showing case number, title, tagline, description, difficulty, estimated time, access status (FREE/COMING SOON), progress (COMPLETED/IN PROGRESS), score
+   239→- Updated page.tsx: stage flow is now landing → archive → briefing → investigation → complete
+   240→- Updated LandingPage: CTA goes to "archive" stage, shows archive stats instead of Case #001 facts
+   241→- Updated ALL game components to use the active story from the store instead of importing from @/data/caseData or @/data/evidenceCatalog:
+   242→  * CaseBrief, SuspectList, CaseIntroduction, CaseComplete, TopBar (accusation dialog), EvidencePanel, EvidenceBoard, InvestigationTimeline, SuspectProfiles, InvestigationProgress, InvestigationLeads, HintPanel, InvestigationDashboard, InvestigationNotes, QueryHistory, DatabaseExplorer
+   243→- Removed old files: src/data/caseData.ts, src/data/evidenceCatalog.ts, src/lib/game/evidenceEngine.ts, src/lib/game/timeline.ts
+   244→- Added "Archive" button to TopBar for returning to the case archive
+   245→
+   246→Verification:
+   247→- Lint clean (0 errors)
+   248→- Query API with storyId=case-001 returns correct suspect data (Maya Chen, Daniel Brooks, etc.)
+   249→- Accusation API with storyId=case-001 + correct answers returns correct:true, correctCount:3
+   250→- Accusation API with wrong answers returns correct:false
+   251→- Agent Browser: Landing → Case Archive shows 3 cases (#001 FREE, #002 COMING SOON, #003 COMING SOON)
+   252→- Case #001 starts correctly: briefing → dashboard with SQL editor
+   253→- Default query (SELECT * FROM suspects) executes against Case #001's database
+   254→
+   255→Stage Summary:
+   256→- ONE GAME ENGINE + MANY STORY PACKS + ONE ISOLATED DATABASE PER STORY + STORY-SPECIFIC LOCAL PROGRESS
+   257→- Case #001 fully migrated, completely playable
+   258→- Case #002 and #003 are placeholder DLC (COMING SOON)
+   259→- No Supabase, no backend, no payment integration
+   260→- Story access abstraction ready for future BackendStoryAccessProvider
+   261→- Adding a new story = create src/stories/case-NNN/ folder + register in registry.ts
+   262→
+   263→---
+   264→Task ID: GOING-DARK
+   265→Agent: main
+   266→Task: Fix preview, eliminate backend, rename to GOING DARK
+   267→
+   268→Work Log:
+   269→- Fixed preview: updated allowedDevOrigins in next.config.ts with explicit preview domain patterns
+   270→- Eliminated backend dependency entirely:
+   271→  * Created src/lib/sql/client-engine.ts — client-side SQL execution using sql.js WASM
+   272→  * The database runs entirely in the browser (in-memory SQLite from story seed data)
+   273→  * Copied sql-wasm.wasm to public/ for client-side loading
+   274→  * Updated use-sql-query hook to call executeQuery() directly (no fetch to /api/query)
+   275→  * Updated DatabaseExplorer to call getSchema() directly (no fetch to /api/query)
+   276→  * Updated TopBar accusation to call evaluateAccusation() directly (no fetch to /api/accuse)
+   277→  * Removed src/app/api/query/ and src/app/api/accuse/ API routes entirely
+   278→  * The game now runs 100% client-side — no backend, no API calls, database is local
+   279→- Renamed game from "SQL Murder Mystery" to "GOING DARK":
+   280→  * Updated layout.tsx title metadata
+   281→  * Updated LandingPage hero title to "GOING DARK"
+   282→  * Updated TopBar header text
+   283→  * Updated CaseArchive header text
+   284→  * Updated type comments
+   285→
+   286→Verification:
+   287→- Lint clean (0 errors)
+   288→- Home page returns 200 with "GOING DARK" content
+   289→- WASM file accessible at /sql-wasm.wasm (200)
+   290→- No blocked origin errors
+   291→- Query execution works client-side (verified "Maya Chen" and "Daniel Brooks" in results)
+   292→- The game is now fully self-contained: no backend, no external database, no API calls
+   293→
+   294→Stage Summary:
+   295→- Game renamed to "GOING DARK"
+   296→- Database is locally stored in the game (client-side sql.js WASM, in-memory)
+   297→- No backend dependency — the game runs entirely in the browser
+   298→- Preview should be visible (allowedDevOrigins fixed, server running)
+   299→
+   300→---
+   301→Task ID: UX-FIXES
+   302→Agent: main
+   303→Task: Fix objective updates, add starter queries, manual evidence discovery, remove favicon, cursor:pointer
+   304→
+   305→Work Log:
+   306→1. Fixed objective completion: objectives now complete based on query-pattern triggers (objectiveTriggers in story solution), NOT on evidence discovery. Added ObjectiveTrigger type with test functions that fire when the player runs relevant queries. This means OBJ-1 completes when querying visits during TOD, OBJ-4 completes when finding CAMERA_DISABLED, etc.
+   307→
+   308→2. Added "Load starter query" to Progress panel: each objective now has a starterQuery field. The InvestigationProgress component shows a "LOAD STARTER QUERY" button for each objective that loads the SQL into the editor.
+   309→
+   310→3. Removed automatic evidence discovery: evidence is NO LONGER auto-discovered when a query runs. Instead, the user must manually click on specific rows in the results table to inspect them for evidence. The QueryResults component now has handleRowClick which tests each clicked row against all evidence triggers. Discovered rows show a fingerprint icon. A hint "Click a row to inspect for evidence" is shown in the results meta bar.
+   311→
+   312→4. Removed favicon: removed `icons` from layout.tsx metadata, deleted public/logo.svg and public/favicon.ico.
+   313→
+   314→5. Added cursor:pointer globally: added CSS rule in globals.css targeting button, [role="button"], a, [onclick], [data-clickable], .cursor-pointer.
+   315→
+   316→6. Updated solution.ts: replaced evidenceObjectiveMap with objectiveTriggers (query-pattern-based). Each objective has a trigger test that fires based on query content + result patterns.
+   317→
+   318→7. Updated use-sql-query hook: removed automatic evidence discovery + evidenceObjectiveMap logic. Now only completes objectives via objectiveTriggers. Evidence discovery is handled by QueryResults row click.
+   319→
+   320→8. Updated QueryResults: rows are now clickable (cursor:pointer, hover highlight). Clicking a row checks all evidence triggers against that single row. If evidence is found, it's discovered + timeline event added + fingerprint icon shown on the row.
+   321→
+   322→Verification:
+   323→- Lint clean (0 errors)
+   324→- Progress tab shows OBJ-1, OBJ-2, etc. with "LOAD STARTER QUERY" buttons (VLM confirmed)
+   325→- Query execution works (returned "Maya Chen" in results)
+   326→- Favicon removed (no icons in layout, files deleted)
+   327→- Server running, home: 200
+   328→
+   329→---
+   330→Task ID: CASE2-DB
+   331→Agent: general-purpose
+   332→Task: Create Case #002 (THE BLACK ORBIT) database seed module
+   333→
+   334→Work Log:
+   335→- Read prior worklog, types.ts (InvestigationDatabaseSeed = {schema: TableSchemaDef[]; tables: SeedTable[]}), schema.ts (CASE_002_SCHEMA — 11 tables: agents, satellites, access_logs, credentials, communications, locations, agent_movements, financial_records, mission_records, satellite_events, identity_events), and suspects.ts (Anya=AGT-003 culprit, Sokolov=AGT-001, Ethan=AGT-002 red herring, Dmitri=AGT-004 co-conspirator, Lena=AGT-005).
+   336→- Created /home/z/my-project/src/stories/case-002/database.ts exporting `CASE_002_DATABASE: InvestigationDatabaseSeed`.
+   337→- Imports `CASE_002_SCHEMA` from `./schema` (per task spec) and assigns it to the `schema` field (engine's client-engine.ts uses story.database.schema to create tables in-memory — no longer falls back to Case-1 shared schema).
+   338→- Defined `T(h,m,s=0)` helper for 2025-03-15 UTC timestamps and `D(date,h,m,s=0)` helper for earlier-date timestamps (financial records + pre-incident comms).
+   339→- Seeded all 11 tables with rich intelligence-database data:
+   340→  * agents (9): 5 primary suspects + 4 noise (Boris, Carter, Pavel-suspended, Yuki)
+   341→  * satellites (4): KOSMOS-9147 (target/COMPROMISED) + 3 noise
+   342→  * access_logs (18): 14 SUCCESS events for RUS-77A on SAT-K9147 between 01:50:12-02:28:45, with the 02:13:18->02:21:12 gap preserved; 2 DENIED access attempts (IMF-E1, FSB-A1) and 2 noise rows on other satellites
+   343→  * credentials (6): RUS-77A owned by AGT-001 Sokolov (ACTIVE, expires 2027); RUS-44B/AGT-004, IMF-E1/AGT-002, IMF-L1/AGT-005, FSB-A1/AGT-003; 1 EXPIRED noise (RUS-19C / Boris)
+   344→  * communications (22): Anya↔Dmitri = 8 messages (most frequent pair); Ethan↔Lena = 4; Sokolov↔Anya = 2 (red herring); plus 8 noise across 5 other pairs. 4 message_hashes contain "TR-914" and 3 contain "RUS-77A" — discoverable via LIKE.
+   345→  * locations (6): LOC-01 Plesetsk Uplink Facility, LOC-02 Moscow Secure Facility (Sokolov's alibi), LOC-03 IMF European HQ, LOC-04 GRU Cyber Center, LOC-05 Arkhangelsk Relay Station, LOC-06 Vienna IMF Office
+   346→  * agent_movements (17): Sokolov at LOC-02 22:00→04:00 (alibi covers incident); Anya at LOC-01 01:30→02:50 (KEY); Dmitri at LOC-01 01:15→03:00 (co-conspirator); Ethan at LOC-01 01:45→02:35 (RED HERRING — inconsistent with IMF mission)
+   347→  * financial_records (17): 5 TR-914 payments to Anya ($9.5k USD, €7.2k EUR, $12k USD, ₽890k RUB, $5k USD) + 2 TR-914 to Dmitri (₽450k, $3.2k) + 10 NULL-reference noise salaries
+   348→  * mission_records (6): MSN-001 Ethan OPERATION NIGHTWATCH 00:00→04:00 COMPLETED (inconsistent with his LOC-01 movement); plus 5 noise missions
+   349→  * satellite_events (15): 12 KOSMOS-9147 events including the 7-min 42-sec gap (02:13:18 TELEMETRY_LOSS CRITICAL → 02:21:00 TELEMETRY_RESTORE CRITICAL); 3 CRITICAL events in window; 3 noise events on other satellites
+   350→  * identity_events (7): 5 events for RUS-77A claiming 4 distinct identities (Sokolov, Dmitri Volkov, Anya Petrova, Anonymous Operator) — all VERIFIED; 2 noise events for other credentials
+   351→
+   352→Verification (node + TypeScript compiler API in-memory transpile):
+   353→- TypeScript type-check (tsc --noEmit --project tsconfig.json): NO errors in case-002 files
+   354→- ESLint (eslint src/stories/case-002/): exit 0, clean
+   355→- Runtime structural + clue-discoverability test (15 assertions) — ALL PASSED:
+   356→  * Row counts within spec ranges: agents 9/8-10, satellites 4/3-4, access_logs 18/15-20, credentials 6/5-6, communications 22/20-25, locations 6/5-6, agent_movements 17/15-20, financial_records 17/15-20, mission_records 6/5-6, satellite_events 15/12-15, identity_events 7/6-8
+   357→  * Clue 1: 3 CRITICAL K9147 events in 01:50-02:30 window ✓
+   358→  * Clue 3: 7.70-min gap 02:13:18→02:21:00 (within ~7-min target) ✓
+   359→  * Clue 4: 14 SUCCESS access_logs for RUS-77A on K9147 ✓
+   360→  * Clue 6: RUS-77A ACTIVE owner = AGT-001 (Sokolov) ✓
+   361→  * Clue 8: Sokolov at LOC-02 (Moscow Secure Facility) covering incident window ✓
+   362→  * Clue 12: 8 Anya-Dmitri comms before incident ✓
+   363→  * Clue 13: Anya↔Dmitri is the top pair (8 messages, next is Ethan↔Lena with 4) ✓
+   364→  * Clue 16-17: Anya has 5 TR-914 payments (>= 4 required) ✓
+   365→  * Clue 18: 4 communications contain "TR-914" in message_hash (MSG-0001/0003/0005/0007) ✓
+   366→  * Clue 20-21: RUS-77A used under 4 distinct claimed identities ✓
+   367→  * Clue 22: Anya at LOC-01 Plesetsk Uplink Facility 01:30→02:50 (covers entire incident window) ✓
+   368→
+   369→Stage Summary:
+   370→- Case #002's investigation database is now available as a typed TypeScript module (`CASE_002_DATABASE`) ready for the engine's `Story.database` field.
+   371→- The story emerges from database relationships across 5 parallel investigation threads (SATELLITE/ACCESS, CREDENTIAL, COMMUNICATION, FINANCIAL, MOVEMENT) all converging on Anya Petrova (AGT-003).
+   372→- Key evidence is discoverable via standard SQL: JOINs (agents↔credentials↔access_logs), GROUP BY + ORDER BY COUNT DESC (top comm pair), LIKE '%TR-914%' (cross-table reference), timestamp BETWEEN (event window + gap detection).
+   373→- Red herrings: Ethan Hunt's movement at LOC-01 (inconsistent with IMF mission), Sokolov↔Anya comms (innocent briefings), Pavel's SUSPENDED status, Boris's expired credential.
+   374→- Next step: a separate task can wire `CASE_002_DATABASE` into a case-002 `index.ts` (alongside metadata/suspects/objectives/leads/evidence/triggers/timeline/accusation/solution modules) and register the case in STORY_REGISTRY so the engine picks it up.
+   375→
+   376→---
+   377→Task ID: CASE2
+   378→Agent: main
+   379→Task: Implement Case #002 — THE BLACK ORBIT (complete playable story)
+   380→
+   381→Work Log:
+   382→- Inspected existing architecture: story registry, types, client-engine, Case 1 structure
+   383→- Refactored SQL engine (client-engine.ts) to support per-story schemas:
+   384→  * Added TableSchemaDef type (schema definition per table)
+   385→  * Added schema field to InvestigationDatabaseSeed (optional for backward compat)
+   386→  * Engine now checks story.database.schema — if present, creates story-specific tables; if absent, uses default Case 1 schema
+   387→  * ALLOWED_TABLES is now dynamic per story (getAllowedTables function)
+   388→  * getSchema function reads table names and descriptions from the story's schema definition
+   389→  * validateQuery accepts optional allowedTables parameter
+   390→- Created Case 2 story content in src/stories/case-002/:
+   391→  * metadata.ts — spy satellite mystery, FREE access, difficulty INSPECTOR
+   392→  * suspects.ts — 5 suspects: Sokolov, Ethan Hunt, Anya Petrova, Dmitri Volkov, Lena Kovač
+   393→  * schema.ts — 11 tables: agents, satellites, access_logs, credentials, communications, locations, agent_movements, financial_records, mission_records, satellite_events, identity_events
+   394→  * database.ts — full seed data (created by subagent): 9 agents, 4 satellites, 18 access_logs, 6 credentials, 22 communications, 6 locations, 17 movements, 17 financial_records, 6 missions, 15 satellite_events, 7 identity_events
+   395→  * objectives.ts — 10 objectives with 3-level hints and starter queries
+   396→  * leads.ts — 10 investigative leads with starter queries
+   397→  * evidence.ts — 10 evidence catalog items with accusation dimensions
+   398→  * triggers.ts — 10 content-based evidence triggers
+   399→  * timeline.ts — 8 chronological timeline events
+   400→  * accusation.ts — WHO/HOW/WHY options with 4 choices each
+   401→  * solution.ts — Anya Petrova (AGT-003) is the culprit; credential theft + orbital key extraction
+   402→  * index.ts — assembles full Story object
+   403→- Registered Case 2 in registry.ts as playable (moved from COMING_SOON to PLAYABLE_STORIES)
+   404→- Made schema field optional in InvestigationDatabaseSeed type (backward compatibility with Case 1)
+   405→- Updated Case 3 (Glasshouse Protocol) — removed from COMING_SOON list (was replaced by Black Orbit)
+   406→
+   407→Story Summary:
+   408→- Solution: Anya Petrova (FSB analyst) stole Sokolov's credential RUS-77A, was physically at the uplink facility, communicated with Dmitri Volkov, received TR-914 payments, manipulated identity records
+   409→- 7-minute telemetry gap on KOSMOS-9147 (02:13-02:21 UTC)
+   410→- Ethan Hunt deliberately inserted as false trail
+   411→- 5/5 difficulty with CTEs, window functions, multi-table JOINs
+   412→
+   413→Verification:
+   414→- Lint: 0 errors
+   415→- Server: running, home: 200
+   416→- Case Archive: shows 3 cases (#001 FREE, #002 FREE, #003 COMING SOON)
+   417→- Case 2 selected from archive without errors
+   418→- Case 2 dashboard loads with SQL editor
+   419→- Query "SELECT * FROM agents;" executes against Case 2's database (client-side sql.js)
+   420→

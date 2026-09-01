@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from "react";
 import { UserCircle, Fingerprint, StickyNote, X } from "lucide-react";

@@ -1,11 +1,10 @@
-"use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, XCircle, Award, RotateCcw, FileCheck2, Fingerprint, GraduationCap, Archive } from "lucide-react";
-import { useGameStore, useActiveStory, useAccusation, useDiscoveredEvidence, useQueryHistory, useLearnedConcepts } from "@/lib/game/store";
+import { CheckCircle2, XCircle, Award, RotateCcw, FileCheck2, Fingerprint, Archive } from "lucide-react";
+import { useGameStore, useActiveStory, useAccusation, useDiscoveredEvidence, useQueryHistory } from "@/lib/game/store";
 import { useAudio } from "@/hooks/use-audio";
 import { Button } from "@/components/ui/button";
-import { CONCEPT_META, type SqlConcept } from "@/lib/sql/analyzer";
+import { getPlatform } from "@/services/platform";
 
 export function CaseComplete() {
   const story = useActiveStory();
@@ -13,21 +12,23 @@ export function CaseComplete() {
   const discovered = useDiscoveredEvidence();
   const queryHistory = useQueryHistory();
   const score = useGameStore((s) => (s.activeStoryId ? s.progress[s.activeStoryId]?.score ?? 0 : 0));
-  const learnedConcepts = useLearnedConcepts();
   const reset = useGameStore((s) => s.resetActiveStory);
   const exitToArchive = useGameStore((s) => s.exitToArchive);
   const { play } = useAudio();
   const [show, setShow] = useState(false);
 
-  const learnedConceptsList = (learnedConcepts as SqlConcept[]).filter((c) =>
-    CONCEPT_META.some((m) => m.id === c),
-  );
 
   useEffect(() => {
     play("solved");
     const id = setTimeout(() => setShow(true), 200);
+    // Notify platform: gameplay stops, show ad between cases
+    const platform = getPlatform();
+    platform.onGameStop();
+    if (accusation?.correct) {
+      void platform.showAd("between-cases");
+    }
     return () => clearTimeout(id);
-  }, [play]);
+  }, [play, accusation?.correct]);
 
   if (!accusation || !story) {
     return (
@@ -47,7 +48,7 @@ export function CaseComplete() {
 
   const stats = [
     { label: "Evidence Collected", value: `${discovered.length}/${story.evidenceCatalog.length}` },
-    { label: "Queries Executed", value: queryHistory.length },
+    { label: "Records Searched", value: queryHistory.length },
     { label: "Final Score", value: score },
   ];
 
@@ -138,44 +139,6 @@ export function CaseComplete() {
             </div>
           )}
 
-          {/* Educational summary */}
-          {accusation.correct && (
-            <div className="mt-8 border border-primary/30 bg-card/40 rounded-sm p-5 fade-up">
-              <div className="flex items-center gap-2">
-                <GraduationCap className="size-4 text-primary" />
-                <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-primary">What You Learned</span>
-              </div>
-              <p className="mt-2 text-xs text-muted-foreground leading-relaxed">
-                You used these SQL concepts over the course of the investigation:
-              </p>
-              <div className="mt-3 space-y-1.5">
-                {learnedConceptsList.map((c) => {
-                  const meta = CONCEPT_META.find((m) => m.id === c);
-                  return (
-                    <div key={c} className="flex items-start gap-2 border border-border/40 bg-black/20 rounded-sm px-2 py-1.5">
-                      <span className="font-mono text-[10px] uppercase tracking-wider text-primary px-1.5 border border-primary/30 rounded-sm shrink-0 mt-0.5">
-                        {meta?.label ?? c}
-                      </span>
-                      <span className="text-[11px] text-muted-foreground/90 leading-snug">
-                        {meta?.hint ?? ""}
-                      </span>
-                    </div>
-                  );
-                })}
-                {learnedConceptsList.length === 0 && (
-                  <p className="text-[11px] text-muted-foreground/50 italic">No concepts tracked yet.</p>
-                )}
-              </div>
-              <div className="mt-4 pt-3 border-t border-border/40">
-                <p className="text-sm font-mono text-foreground/90 italic leading-relaxed">
-                  "You didn't learn SQL so you could play the game.
-                  <br />
-                  You learned SQL because you needed it to solve the murder."
-                </p>
-              </div>
-            </div>
-          )}
-
           {/* Actions */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
             {accusation.correct ? (
@@ -215,7 +178,7 @@ export function CaseComplete() {
                   className="font-mono uppercase tracking-[0.2em] text-sm h-12 px-8 bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   <Award className="size-4" />
-                  Return to Database
+                  Return to Investigation
                 </Button>
                 <Button
                   onClick={() => {
@@ -237,7 +200,7 @@ export function CaseComplete() {
 
       <footer className="border-t border-border/60 py-3 mt-auto">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 flex items-center justify-between text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">
-          <span>Case {CASE.caseNumber} — {CASE.title}</span>
+          <span>Case {meta.caseNumber} — {meta.title}</span>
           <span>{accusation.correct ? "SOLVED" : "UNSOLVED"}</span>
         </div>
       </footer>

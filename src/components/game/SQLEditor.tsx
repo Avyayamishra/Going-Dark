@@ -36,7 +36,7 @@ export function SQLEditor({ value, onChange, onResult, onRunningChange }: SQLEdi
         error: {
           kind: "EMPTY_QUERY",
           title: "EMPTY QUERY",
-          message: "The query editor is empty. Write a SELECT statement and run it again.",
+          message: "The search terminal is empty. Enter a search command and run it.",
           hint: "Tip: try SELECT * FROM suspects;",
         },
         executionTimeMs: 0,
@@ -177,7 +177,7 @@ export function SQLEditor({ value, onChange, onResult, onRunningChange }: SQLEdi
             className="font-mono uppercase tracking-wider text-xs h-8 bg-primary text-primary-foreground hover:bg-primary/90"
           >
             {running ? <Loader2 className="size-3.5 animate-spin" /> : <Play className="size-3.5" />}
-            Run Query
+            Search
           </Button>
           <Button
             onClick={() => {
@@ -199,7 +199,7 @@ export function SQLEditor({ value, onChange, onResult, onRunningChange }: SQLEdi
           </span>
           <span className="inline-flex items-center gap-1">
             <Clock className="size-3" />
-            SQLite
+            Records DB
           </span>
         </div>
       </div>

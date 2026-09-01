@@ -1,4 +1,3 @@
-"use client";
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
@@ -26,11 +25,7 @@ export interface StoryProgress {
   accusation: AccusationRecord | null;
   score: number;
   timeline: TimelineEvent[];
-  learnedConcepts: string[];
-  shownInsights: string[];
-  /** Whether the player has started this story (entered briefing/investigation). */
   started: boolean;
-  /** Whether the case has been solved. */
   completed: boolean;
 }
 
@@ -46,33 +41,27 @@ function emptyProgress(storyId: string): StoryProgress {
     accusation: null,
     score: 0,
     timeline: [],
-    learnedConcepts: [],
-    shownInsights: [],
     started: false,
     completed: false,
   };
 }
 
-// ---------- Global game state (not story-specific) ----------
+// ---------- Global game state ----------
 
 export type GameStage = "landing" | "archive" | "briefing" | "investigation" | "complete";
 
 interface GameStore {
-  // Global
   stage: GameStage;
   activeStoryId: string | null;
   audioEnabled: boolean;
   audioVolume: number;
-  // Per-story progress map
   progress: Record<string, StoryProgress>;
   _hasHydrated: boolean;
 
-  // Actions
   setStage: (stage: GameStage) => void;
   selectStory: (storyId: string) => void;
   exitToArchive: () => void;
 
-  // Per-story actions (operate on the active story)
   addQuery: (item: QueryHistoryItem) => void;
   clearHistory: () => void;
   discoverEvidence: (ev: DiscoveredEvidence) => void;
@@ -83,32 +72,26 @@ interface GameStore {
   completeObjective: (id: string) => void;
   setAccusation: (acc: AccusationRecord) => void;
   setAudio: (enabled: boolean, volume: number) => void;
-  recordConcepts: (concepts: string[]) => void;
-  markInsightShown: (concept: string) => void;
   addTimelineEvent: (ev: TimelineEvent) => void;
   penalizeScore: (points: number) => void;
   resetActiveStory: () => void;
   _setHydrated: () => void;
 }
 
-// Helper to get the active story's progress (or a fresh one).
 function getActiveProgress(state: GameStore): StoryProgress | null {
   if (!state.activeStoryId) return null;
   return state.progress[state.activeStoryId] ?? emptyProgress(state.activeStoryId);
 }
 
-// Helper to update the active story's progress immutably.
 function updateActiveProgress(state: GameStore, updater: (p: StoryProgress) => StoryProgress): Partial<GameStore> {
   if (!state.activeStoryId) return {};
   const current = state.progress[state.activeStoryId] ?? emptyProgress(state.activeStoryId);
-  return {
-    progress: { ...state.progress, [state.activeStoryId]: updater(current) },
-  };
+  return { progress: { ...state.progress, [state.activeStoryId]: updater(current) } };
 }
 
 export const useGameStore = create<GameStore>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       stage: "landing",
       activeStoryId: null,
       audioEnabled: false,
@@ -126,35 +109,22 @@ export const useGameStore = create<GameStore>()(
           return {
             activeStoryId: storyId,
             stage: existing.completed ? "complete" : "briefing",
-            progress: {
-              ...s.progress,
-              [storyId]: { ...existing, started: true },
-            },
+            progress: { ...s.progress, [storyId]: { ...existing, started: true } },
           };
         }),
 
       exitToArchive: () => set({ stage: "archive", activeStoryId: null }),
 
       addQuery: (item) =>
-        set((s) =>
-          updateActiveProgress(s, (p) => ({
-            ...p,
-            queryHistory: [item, ...p.queryHistory].slice(0, 100),
-          })),
-        ),
+        set((s) => updateActiveProgress(s, (p) => ({ ...p, queryHistory: [item, ...p.queryHistory].slice(0, 100) }))),
 
-      clearHistory: () =>
-        set((s) => updateActiveProgress(s, (p) => ({ ...p, queryHistory: [] }))),
+      clearHistory: () => set((s) => updateActiveProgress(s, (p) => ({ ...p, queryHistory: [] }))),
 
       discoverEvidence: (ev) =>
         set((s) =>
           updateActiveProgress(s, (p) => {
             if (p.discoveredEvidence.some((e) => e.evidenceId === ev.evidenceId)) return p;
-            return {
-              ...p,
-              discoveredEvidence: [...p.discoveredEvidence, ev],
-              score: p.score + 100,
-            };
+            return { ...p, discoveredEvidence: [...p.discoveredEvidence, ev], score: p.score + 100 };
           }),
         ),
 
@@ -162,23 +132,14 @@ export const useGameStore = create<GameStore>()(
         set((s) =>
           updateActiveProgress(s, (p) => ({
             ...p,
-            notes: [
-              { id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, createdAt: Date.now() },
-              ...p.notes,
-            ].slice(0, 200),
+            notes: [{ id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, text, createdAt: Date.now() }, ...p.notes].slice(0, 200),
           })),
         ),
 
-      removeNote: (id) =>
-        set((s) => updateActiveProgress(s, (p) => ({ ...p, notes: p.notes.filter((n) => n.id !== id) }))),
+      removeNote: (id) => set((s) => updateActiveProgress(s, (p) => ({ ...p, notes: p.notes.filter((n) => n.id !== id) }))),
 
       updateNote: (id, text) =>
-        set((s) =>
-          updateActiveProgress(s, (p) => ({
-            ...p,
-            notes: p.notes.map((n) => (n.id === id ? { ...n, text } : n)),
-          })),
-        ),
+        set((s) => updateActiveProgress(s, (p) => ({ ...p, notes: p.notes.map((n) => (n.id === id ? { ...n, text } : n)) }))),
 
       useHint: (objectiveId, level) =>
         set((s) => {
@@ -194,10 +155,7 @@ export const useGameStore = create<GameStore>()(
             if (!hintDef) return p;
             return {
               ...p,
-              hints: [
-                ...p.hints,
-                { id: hintKey, level, title: hintDef.title, body: hintDef.body, revealedAt: Date.now() },
-              ],
+              hints: [...p.hints, { id: hintKey, level, title: hintDef.title, body: hintDef.body, revealedAt: Date.now() }],
               hintsUsed: p.hintsUsed + 1,
               score: Math.max(0, p.score - 25),
             };
@@ -208,52 +166,16 @@ export const useGameStore = create<GameStore>()(
         set((s) =>
           updateActiveProgress(s, (p) => {
             if (p.completedObjectives.includes(id)) return p;
-            return {
-              ...p,
-              completedObjectives: [...p.completedObjectives, id],
-              score: p.score + 200,
-            };
+            return { ...p, completedObjectives: [...p.completedObjectives, id], score: p.score + 200 };
           }),
         ),
 
       setAccusation: (acc) =>
         set((s) =>
-          updateActiveProgress(s, (p) => ({
-            ...p,
-            accusation: acc,
-            score: acc.correct ? p.score + 500 : p.score,
-            completed: acc.correct,
-          })),
+          updateActiveProgress(s, (p) => ({ ...p, accusation: acc, score: acc.correct ? p.score + 500 : p.score, completed: acc.correct })),
         ),
 
       setAudio: (enabled, volume) => set({ audioEnabled: enabled, audioVolume: volume }),
-
-      recordConcepts: (concepts) =>
-        set((s) =>
-          updateActiveProgress(s, (p) => {
-            const existing = new Set(p.learnedConcepts);
-            let added = false;
-            for (const c of concepts) {
-              if (!existing.has(c)) {
-                existing.add(c);
-                added = true;
-              }
-            }
-            if (!added) return p;
-            return {
-              ...p,
-              learnedConcepts: Array.from(existing),
-              score: p.score + concepts.filter((c) => !p.learnedConcepts.includes(c)).length * 5,
-            };
-          }),
-        ),
-
-      markInsightShown: (concept) =>
-        set((s) =>
-          updateActiveProgress(s, (p) =>
-            p.shownInsights.includes(concept) ? p : { ...p, shownInsights: [...p.shownInsights, concept] },
-          ),
-        ),
 
       addTimelineEvent: (ev) =>
         set((s) =>
@@ -267,44 +189,28 @@ export const useGameStore = create<GameStore>()(
       resetActiveStory: () =>
         set((s) => {
           if (!s.activeStoryId) return s;
-          return {
-            progress: { ...s.progress, [s.activeStoryId]: emptyProgress(s.activeStoryId) },
-            stage: "briefing",
-          };
+          return { progress: { ...s.progress, [s.activeStoryId]: emptyProgress(s.activeStoryId) }, stage: "briefing" };
         }),
 
       penalizeScore: (points) =>
-        set((s) =>
-          updateActiveProgress(s, (p) => ({
-            ...p,
-            score: Math.max(0, p.score - points),
-          })),
-        ),
+        set((s) => updateActiveProgress(s, (p) => ({ ...p, score: Math.max(0, p.score - points) }))),
 
       _setHydrated: () => set({ _hasHydrated: true }),
     }),
     {
-      name: "sql-murder-mystery-state",
-      version: 3,
+      name: "going-dark-save",
+      version: 4,
       skipHydration: true,
-      onRehydrateStorage: () => (state) => {
-        state?._setHydrated();
-      },
+      onRehydrateStorage: () => (state) => { state?._setHydrated(); },
     },
   ),
 );
 
-// ---------- Selectors (hooks that read the active story's progress) ----------
+// ---------- Selectors ----------
 
 export function useActiveStory(): Story | null {
   return useGameStore((s) => (s.activeStoryId ? STORY_REGISTRY.getStory(s.activeStoryId) : null));
 }
-
-export function useActiveProgress(): StoryProgress | null {
-  return useGameStore((s) => getActiveProgress(s));
-}
-
-// Convenience hooks for individual progress fields.
 export function useDiscoveredEvidence(): DiscoveredEvidence[] {
   return useGameStore((s) => getActiveProgress(s)?.discoveredEvidence ?? []);
 }
@@ -325,12 +231,6 @@ export function useScore(): number {
 }
 export function useTimeline(): TimelineEvent[] {
   return useGameStore((s) => getActiveProgress(s)?.timeline ?? []);
-}
-export function useLearnedConcepts(): string[] {
-  return useGameStore((s) => getActiveProgress(s)?.learnedConcepts ?? []);
-}
-export function useShownInsights(): string[] {
-  return useGameStore((s) => getActiveProgress(s)?.shownInsights ?? []);
 }
 export function useAccusation(): AccusationRecord | null {
   return useGameStore((s) => getActiveProgress(s)?.accusation ?? null);

@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useState } from "react";
 import { Table2, ChevronRight, ChevronDown, Key, Hash, Type, Search, RefreshCw } from "lucide-react";

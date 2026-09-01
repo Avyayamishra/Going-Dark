@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from "react";
 import { Lightbulb, Lock, ChevronRight, ChevronDown } from "lucide-react";
@@ -20,7 +19,7 @@ const THREAD_COLORS: Record<string, string> = {
 const LEVEL_LABELS: Record<number, { label: string; desc: string }> = {
   1: { label: "Investigative", desc: "Direction for the investigation" },
   2: { label: "Database", desc: "Which table / field to look at" },
-  3: { label: "SQL Concept", desc: "The SQL technique to use" },
+  3: { label: "Technique", desc: "The search technique to use" },
 };
 
 export function HintPanel() {
@@ -44,7 +43,7 @@ export function HintPanel() {
         <span className="tabular-nums">{hints.length} revealed</span>
       </div>
       <p className="px-1 text-[10px] text-muted-foreground/60 leading-snug">
-        Three progressive levels per objective: investigative → database → SQL. Each level costs -25 pts.
+        Three progressive levels per objective: investigative → records → technique. Each level costs -25 pts.
       </p>
       {objectives.map((obj) => {
         const isExpanded = expanded === obj.id;

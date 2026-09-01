@@ -1,7 +1,6 @@
-"use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight, FileText, Users, Clock, ChevronRight, Satellite, Radio, ShieldAlert, Lock, Database, Eye } from "lucide-react";
+import { ArrowRight, FileText, Users, Clock, ChevronRight, Satellite, Radio, ShieldAlert, Lock, Database, Eye, Train, KeyRound, Wrench } from "lucide-react";
 import { useGameStore, useActiveStory } from "@/lib/game/store";
 import { useAudio } from "@/hooks/use-audio";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,12 @@ const CASE_BEATS: Record<string, { icon: React.ElementType; label: string; text:
     { icon: Lock, label: "LEGITIMATE CREDENTIAL", text: "The authentication used a valid Russian authorization certificate (RUS-77A). The credential was technically active and belonged to a Colonel who was hundreds of kilometers away." },
     { icon: ShieldAlert, label: "IMPOSSIBLE ACCESS", text: "Russian authorities claim a routine telemetry malfunction. The IMF believes someone used the missing seven minutes to extract a classified orbital communication key." },
     { icon: Eye, label: "FALSE TRAIL", text: "Agent Ethan Hunt was assigned to investigate — but his movements during the incident are inconsistent with his mission. Someone deliberately inserted him into the trail." },
+  ],
+  "case-003": [
+    { icon: Train, label: "11:47 PM", text: "The Maharaja Meridian luxury train enters Khandala Tunnel. When it emerges four minutes later, billionaire Arvind Rao is dead inside locked cabin A-17." },
+    { icon: KeyRound, label: "LOCKED CABIN", text: "The cabin door was latched from inside. The window is sealed. CCTV shows no person entering A-17. No weapon is found inside." },
+    { icon: Wrench, label: "IMPOSSIBLE CRIME", text: "The initial assumption: nobody could have entered. The player must determine whether that assumption is actually correct." },
+    { icon: Eye, label: "THE TUNNEL WINDOW", text: "For four minutes and twelve seconds, the train was in darkness. Something happened during those minutes that the records can reveal." },
   ],
 };
 
@@ -94,7 +99,7 @@ export function CaseIntroduction() {
             }`}
           >
             <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-primary">
-              {storyId === "case-002" ? "Incident Window" : "Estimated Time of Death"}
+              {storyId === "case-002" || storyId === "case-003" ? "Incident Window" : "Estimated Time of Death"}
             </div>
             <div className="mt-1 font-mono text-2xl text-foreground">{meta.timeOfDeath}</div>
             <div className="mt-1 text-xs font-mono text-muted-foreground">{meta.incidentDate}</div>
@@ -157,6 +162,12 @@ export function CaseIntroduction() {
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHO accessed the satellite?</li>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> HOW did they obtain the credentials?</li>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHY was Ethan Hunt inserted into the trail?</li>
+                </>
+              ) : storyId === "case-003" ? (
+                <>
+                  <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHO killed Arvind Rao?</li>
+                  <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> HOW did the murder happen inside a locked cabin?</li>
+                  <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHY was no weapon found?</li>
                 </>
               ) : (
                 <>

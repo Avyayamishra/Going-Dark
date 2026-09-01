@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from "react";
 import { LayoutGrid, Lock, Fingerprint, Search, Link2, X, Clock, User, FileText } from "lucide-react";

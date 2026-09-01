@@ -1,4 +1,3 @@
-"use client";
 
 import { Clock, CheckCircle2, XCircle, Trash2, RotateCw } from "lucide-react";
 import { useGameStore, useQueryHistory } from "@/lib/game/store";
@@ -69,26 +68,10 @@ export function QueryHistory({ onRestore }: QueryHistoryProps) {
             <pre className="mt-1 font-mono text-[10px] text-foreground/80 whitespace-pre-wrap break-words leading-snug line-clamp-3">
               {h.sql}
             </pre>
-            {h.ok && h.concepts && h.concepts.length > 0 && (
-              <div className="mt-1 flex flex-wrap gap-1">
-                {h.concepts.slice(0, 6).map((c) => (
-                  <span
-                    key={c}
-                    className="text-[8px] font-mono uppercase tracking-wider px-1 py-px border border-border/40 rounded-sm text-muted-foreground/70 bg-black/20"
-                  >
-                    {c}
-                  </span>
-                ))}
-                {h.concepts.length > 6 && (
-                  <span className="text-[8px] font-mono text-muted-foreground/50">+{h.concepts.length - 6}</span>
-                )}
-              </div>
-            )}
             <div className="mt-1 flex items-center gap-2 text-[9px] font-mono text-muted-foreground/50">
               <span>{new Date(h.executedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
               <span>·</span>
-              {h.ok ? <span>{h.rowCount} rows</span> : <span className="text-primary">{h.errorTitle}</span>}
-              {h.ok && h.level && <span className="text-primary/50">· {h.level}</span>}
+              {h.ok ? <span>{h.rowCount} records</span> : <span className="text-primary">{h.errorTitle}</span>}
             </div>
           </button>
         ))}

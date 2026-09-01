@@ -8,6 +8,7 @@ import { CaseIntroduction } from "@/components/game/CaseIntroduction";
 import { InvestigationDashboard } from "@/components/game/InvestigationDashboard";
 import { CaseComplete } from "@/components/game/CaseComplete";
 import { ErrorBoundary } from "@/components/game/ErrorBoundary";
+import { getPlatform } from "@/services/platform";
 
 export default function Home() {
   const stage = useGameStore((s) => s.stage);
@@ -16,6 +17,9 @@ export default function Home() {
   useEffect(() => {
     document.documentElement.classList.add("dark");
     useGameStore.persist.rehydrate();
+    const platform = getPlatform();
+    platform.onGameStart();
+    return () => platform.onGameStop();
   }, []);
 
   if (!hasHydrated) {

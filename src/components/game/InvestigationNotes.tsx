@@ -1,4 +1,3 @@
-"use client";
 
 import { useState } from "react";
 import { Plus, StickyNote, X, Pencil, Check } from "lucide-react";

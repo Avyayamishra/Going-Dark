@@ -1,4 +1,3 @@
-"use client";
 
 import { Compass, CornerDownRight } from "lucide-react";
 import { useActiveStory } from "@/lib/game/store";

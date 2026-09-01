@@ -1,4 +1,3 @@
-"use client";
 
 /**
  * Audio engine — synthesises UI and ambient sounds via the Web Audio API so the

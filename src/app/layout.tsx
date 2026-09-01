@@ -14,10 +14,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GOING DARK — Case #001: The Midnight Archive",
+  title: "GOING DARK — Interactive Mystery Investigation",
   description:
-    "A forensic investigation terminal. Use SQL to query the Nexora Systems database and solve the murder of Elias Voss.",
-  keywords: ["SQL", "murder mystery", "detective", "investigation", "puzzle"],
+    "An interactive mystery investigation game. Explore evidence, follow leads, and solve crimes.",
+  keywords: ["mystery", "investigation", "detective", "puzzle", "going dark"],
 };
 
 export default function RootLayout({

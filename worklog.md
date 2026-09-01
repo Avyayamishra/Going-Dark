@@ -417,3 +417,44 @@ Verification:
 - Case 2 selected from archive without errors
 - Case 2 dashboard loads with SQL editor
 - Query "SELECT * FROM agents;" executes against Case 2's database (client-side sql.js)
+
+---
+Task ID: CASE3-IMPL
+Agent: main
+Task: Implement Case #003 — THE 11:47 TRAIN (locked-room train mystery)
+
+Work Log:
+- Created complete Case 003 story in src/stories/case-003/:
+  * metadata.ts — Train mystery, victim Arvind Rao, cabin A-17, Khandala Tunnel
+  * suspects.ts — 5 suspects: Meera Rao, Kabir Malhotra, Dev Singh (killer), Nikhil Bose, Ananya Kapoor
+  * schema.ts — 10 tables: passengers, tickets, cabin_assignments, dining_transactions, station_logs, cctv_metadata, train_sensors, maintenance_logs, access_logs, medical_report
+  * database.ts — Full seed: 15 passengers, 15 tickets, 12 cabin assignments, 19 dining transactions, 15 station logs, 25 CCTV records, 20 sensor readings, 15 maintenance logs, 18 access logs, 1 medical report
+  * objectives.ts — 8 objectives with 3-level hints and starter queries (SQL investigation stages)
+  * leads.ts — 8 investigative leads with starter queries
+  * evidence.ts — 10 evidence catalog items with accusation dimensions
+  * triggers.ts — 9 content-based evidence triggers
+  * timeline.ts — 7 chronological timeline events
+  * accusation.ts — WHO/HOW/WHY options (train mechanism, selling secrets)
+  * solution.ts — Dev Singh (P003), train mechanism, selling intelligence
+  * index.ts — Full Story object assembly
+- Registered Case 003 in story registry as playable (FREE)
+- Updated CaseIntroduction with Case 003 story beats (locked cabin, tunnel window, impossible crime)
+- Updated objective section for Case 003 (WHO killed Arvind, HOW in locked cabin, WHY no weapon)
+- Removed old COMING_SOON metadata for Case 003
+- Removed old src/app/api/ directory (leftover from Next.js)
+- Removed unused sidebar.tsx component
+
+Key Evidence Chain:
+1. Arvind alive at 23:15 (dining transaction)
+2. A-17 locked at 23:45, all access DENIED during 23:47-23:52
+3. CCTV low-light during tunnel — no entry recorded
+4. Maintenance STATE_CHANGE on ACTUATOR in A-coach at 23:48:16
+5. DEV-Sec credential at SECURITY-CONSOLE at 23:46:51 (Dev claims he never touched system)
+6. PRESSURE SPIKE on A-17 at 23:48:19 (source: MAINTENANCE)
+7. ACTUATOR_STATE DEPLOYED then RETRACTED (weapon was part of train)
+8. Medical report: wound consistent with retractable mechanism, not handheld weapon
+
+Solution: Dev Singh remotely triggered a concealed retractable spike inside the train's service infrastructure. Nobody entered A-17. The weapon was already part of the train.
+
+Build: Vite production build succeeds, 1.4MB total (656KB JS + 120KB CSS + 644KB WASM)
+Lint: 0 errors, 3 warnings (React hooks deps)

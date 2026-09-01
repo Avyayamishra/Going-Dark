@@ -1,5 +1,4 @@
 // Shared type definitions for the GOING DARK game.
-// (Game-stage and per-story progress types live in the store module.)
 
 export interface QueryHistoryItem {
   id: string;
@@ -9,8 +8,6 @@ export interface QueryHistoryItem {
   rowCount: number;
   durationMs: number;
   errorTitle?: string;
-  concepts?: string[];
-  level?: string;
 }
 
 export interface DiscoveredEvidence {
@@ -33,7 +30,7 @@ export interface InvestigationNote {
 
 export interface HintItem {
   id: string;
-  level: number; // 1, 2, or 3
+  level: number;
   title: string;
   body: string;
   revealedAt: number;
@@ -52,7 +49,7 @@ export interface AccusationRecord {
 
 export interface TimelineEvent {
   id: string;
-  time: string; // "22:41"
+  time: string;
   label: string;
   description?: string;
   evidenceId?: string;

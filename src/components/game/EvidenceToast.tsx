@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useState } from "react";
 import { Fingerprint, X, Plus } from "lucide-react";

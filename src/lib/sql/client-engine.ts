@@ -1,4 +1,3 @@
-"use client";
 
 /**
  * Client-side SQL execution engine — runs entirely in the browser.
@@ -71,9 +70,11 @@ let _sqlModulePromise: ReturnType<typeof initSqlJs> | null = null;
 
 async function getSqlModule() {
   if (_sqlModulePromise) return _sqlModulePromise;
-  // Load the WASM file from /public/sql-wasm.wasm
+  // Resolve relative to the current document location so it works
+  // from root hosting AND subdirectory hosting.
+  const wasmUrl = new URL('sql-wasm.wasm', document.baseURI).href;
   _sqlModulePromise = initSqlJs({
-    locateFile: (file: string) => `/sql-wasm.wasm`,
+    locateFile: () => wasmUrl,
   });
   return _sqlModulePromise;
 }

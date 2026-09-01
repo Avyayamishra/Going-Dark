@@ -1,4 +1,3 @@
-"use client";
 
 import { useCallback, useEffect } from "react";
 import { getAudioEngine } from "@/lib/audio/engine";

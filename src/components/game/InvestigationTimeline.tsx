@@ -1,4 +1,3 @@
-"use client";
 
 import { Clock3, Lock } from "lucide-react";
 import { useActiveStory, useTimeline, useDiscoveredEvidence } from "@/lib/game/store";

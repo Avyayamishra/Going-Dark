@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useState } from "react";
 import { ShieldAlert, Terminal, Database, Volume2, VolumeX } from "lucide-react";

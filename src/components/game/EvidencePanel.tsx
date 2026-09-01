@@ -1,4 +1,3 @@
-"use client";
 
 import { Fingerprint, ScrollText } from "lucide-react";
 import { useActiveStory, useDiscoveredEvidence } from "@/lib/game/store";
@@ -23,7 +22,7 @@ export function EvidencePanel() {
         <div className="text-center py-8 text-muted-foreground/50">
           <Fingerprint className="size-5 mx-auto mb-2 opacity-40" />
           <p className="text-[11px] font-mono text-muted-foreground/60">No evidence discovered yet.</p>
-          <p className="text-[10px] text-muted-foreground/50 mt-1">Run SQL queries and click result rows to find evidence.</p>
+          <p className="text-[10px] text-muted-foreground/50 mt-1">Search the records and click result rows to find evidence.</p>
         </div>
       )}
       {discoveredCatalog.map((ev) => {

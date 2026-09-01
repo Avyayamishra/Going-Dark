@@ -236,9 +236,3 @@
   background: color-mix(in oklab, var(--primary) 50%, transparent);
 }
 
-/* Monaco container overrides */
-.monaco-shell .monaco-editor,
-.monaco-shell .monaco-editor-background,
-.monaco-shell .monaco-editor .margin {
-  background-color: transparent !important;
-}

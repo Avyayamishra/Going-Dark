@@ -1,4 +1,3 @@
-"use client";
 
 import { FileText, Clock, MapPin, User, ShieldAlert } from "lucide-react";
 import { useActiveStory } from "@/lib/game/store";

@@ -1,4 +1,3 @@
-"use client";
 
 import { Archive, Lock, ChevronLeft, Volume2, VolumeX, CheckCircle2, Play, Clock } from "lucide-react";
 import { useGameStore } from "@/lib/game/store";
@@ -73,7 +72,7 @@ export function CaseArchive() {
               CASE ARCHIVE
             </h1>
             <p className="mt-3 font-mono text-xs text-muted-foreground max-w-xl mx-auto leading-relaxed">
-              Select an investigation to begin. Each case is a self-contained SQL murder mystery —
+              Select an investigation to begin. Each case is a self-contained mystery investigation —
               the database is the crime scene.
             </p>
           </div>

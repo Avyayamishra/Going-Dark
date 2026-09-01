@@ -1,0 +1,1614 @@
+# GLM CODING AGENT PROMPT — IMPLEMENT CASE #002: THE 11:47 TRAIN
+
+You are working on the existing **Going Dark** repository.
+
+Your task is to implement a completely new playable investigation case:
+
+# 🚂 CASE #002 — THE 11:47 TRAIN
+
+This is a **locked-room murder mystery aboard a luxury train** that combines the existing SQL investigation gameplay with a new beginner-friendly Python investigation layer.
+
+**IMPORTANT:** Do NOT rebuild the game from scratch.
+
+First inspect the entire existing repository and understand the current architecture, story system, database seeding, objective system, editor implementation, case progression, UI, state management, save/progress system, and validation logic.
+
+Then integrate this case cleanly into the existing engine.
+
+---
+
+# 1. CORE REQUIREMENT
+
+The new case must feel like a natural part of Going Dark.
+
+The player should:
+
+1. Read the case briefing.
+2. Investigate passengers and suspects using SQL.
+3. Query multiple train-related databases.
+4. Discover contradictions in passenger movements.
+5. Investigate the critical 11:47 PM tunnel window.
+6. Discover suspicious maintenance and security records.
+7. Export/use chronological telemetry evidence.
+8. Switch into a Python investigation environment.
+9. Learn basic Python through actual detective work.
+10. Reconstruct the train's timeline.
+11. Identify how the murder occurred without anyone entering the cabin.
+12. Accuse the killer.
+13. Receive a cinematic-style final explanation.
+
+The case must have a strong feeling of:
+
+> "The database gave me the clues. Python helped me reconstruct what actually happened."
+
+---
+
+# 2. DO NOT BREAK THE EXISTING GAME
+
+Before making changes:
+
+* Inspect the repository.
+* Identify how existing stories/cases are represented.
+* Identify how SQL databases are seeded.
+* Identify how objectives are represented.
+* Identify how objective completion is validated.
+* Identify how the SQL editor works.
+* Identify how game progression works.
+* Identify how hints work.
+* Identify how the final accusation works.
+* Identify how save state works.
+* Identify how the current UI handles multiple cases.
+* Identify whether the current engine is designed for story-specific configuration.
+
+Prefer extending existing abstractions over creating parallel systems.
+
+Do NOT duplicate the entire game engine for this case.
+
+Do NOT hardcode case-specific logic throughout unrelated components.
+
+---
+
+# 3. CASE INFORMATION
+
+## Case
+
+**Title:** The 11:47 Train
+
+**Case ID:**
+
+`GD-002`
+
+**Genre:**
+
+Locked-room mystery / crime thriller
+
+**Setting:**
+
+The Maharaja Meridian, a fictional ultra-luxury overnight train traveling from Mumbai to Delhi.
+
+**Critical event:**
+
+At exactly 11:47 PM, the train enters Khandala Tunnel.
+
+When it emerges approximately four minutes later, wealthy industrialist **Arvind Rao** is found dead inside private cabin **A-17**.
+
+The cabin is locked from the inside.
+
+No person appears to have entered.
+
+The murder weapon is not found inside the cabin.
+
+---
+
+# 4. OPENING STORY
+
+Use this narrative structure.
+
+11:43 PM.
+
+The Maharaja Meridian is moving through the Western Ghats.
+
+Most passengers have retired to their cabins.
+
+Arvind Rao, 61, billionaire industrialist and chairman of Rao Meridian Industries, is working alone in private cabin A-17.
+
+His security chief, Dev Singh, occupies A-16.
+
+11:46 PM.
+
+The train records its final normal location update.
+
+11:47 PM.
+
+The train enters Khandala Tunnel.
+
+The CCTV system switches to low-light mode.
+
+11:51 PM.
+
+The train exits the tunnel.
+
+11:52 PM.
+
+A cabin attendant knocks on A-17.
+
+No response.
+
+11:54 PM.
+
+The attendant uses the emergency override.
+
+Arvind Rao is found dead beside his writing desk.
+
+The cabin door had been locked from inside.
+
+The window is sealed.
+
+No one is recorded entering the cabin.
+
+The initial assumption:
+
+> "Nobody could have entered."
+
+The player's job is to determine whether that assumption is actually correct.
+
+---
+
+# 5. VICTIM
+
+## Arvind Rao
+
+Age: 61
+
+Occupation:
+
+Founder and chairman of Rao Meridian Industries.
+
+Cabin:
+
+A-17
+
+Traveling:
+
+Alone, officially.
+
+Known for:
+
+* Aggressive acquisitions
+* High-profile business rivalries
+* Secret negotiations
+* Extremely controlled security arrangements
+
+Cause of death:
+
+Single narrow puncture wound beneath the left rib.
+
+Estimated death window:
+
+23:47–23:52.
+
+No conventional weapon is found in A-17.
+
+---
+
+# 6. SUSPECTS
+
+Implement these as actual case suspects.
+
+## Meera Rao
+
+Age: 34
+
+Relationship:
+
+Victim's daughter.
+
+Cabin:
+
+Create an appropriate cabin assignment.
+
+Motive:
+
+Arvind planned to sell a controlling stake in the family company.
+
+Hidden information:
+
+She knows about a confidential acquisition agreement Arvind planned to sign in Delhi.
+
+She argues with Arvind during dinner.
+
+Her apparent alibi initially looks strong.
+
+---
+
+## Kabir Malhotra
+
+Age: 49
+
+Role:
+
+Rival industrialist.
+
+Cabin:
+
+B-04
+
+Motive:
+
+Business rivalry.
+
+Public statement:
+
+Claims he never privately met Arvind that night.
+
+Hidden information:
+
+A late-night dining transaction places him near a service corridor at an unusual time.
+
+---
+
+## Dev Singh
+
+Age: 44
+
+Role:
+
+Arvind's head of security.
+
+Cabin:
+
+A-16.
+
+Motive:
+
+Arvind discovered that Dev had secretly been selling company security/logistics information to a competing infrastructure consortium.
+
+Arvind intended to expose him in Delhi.
+
+Hidden information:
+
+Dev interacted with the security console during the tunnel window.
+
+He claims he never touched the system.
+
+TRUE KILLER:
+
+**Dev Singh**
+
+---
+
+## Nikhil Bose
+
+Age: 38
+
+Role:
+
+Train systems engineer.
+
+Motive:
+
+Potentially financial and professional.
+
+Statement:
+
+Claims CCTV behavior was entirely automatic because of the tunnel.
+
+Hidden information:
+
+A maintenance action occurred shortly before the train entered the tunnel.
+
+He should be a strong red-herring suspect.
+
+---
+
+## Ananya Kapoor
+
+Age: 29
+
+Role:
+
+Arvind's executive assistant.
+
+Cabin:
+
+C-02.
+
+Statement:
+
+Claims she remained in her cabin preparing documents.
+
+Hidden information:
+
+Her ticket was issued under a different passenger category than the initial booking record suggests.
+
+She should also function as a red herring.
+
+---
+
+# 7. THE TRUE MURDER METHOD
+
+This is critical.
+
+The murder weapon was NOT carried into the cabin.
+
+The weapon was already part of the train.
+
+Dev secretly modified a retractable maintenance spike inside a service assembly in A-coach.
+
+The spike is connected to a concealed actuator.
+
+The mechanism is aligned with an existing service aperture near A-17.
+
+Arvind frequently worked at the writing desk.
+
+During the tunnel:
+
+* Dev activates the mechanism remotely.
+* The spike extends.
+* It reaches Arvind through the service path.
+* Arvind receives the fatal wound.
+* The spike retracts.
+* The mechanism returns to an apparently normal state.
+
+Therefore:
+
+* The cabin door never opens.
+* Nobody enters the cabin.
+* No conventional weapon remains inside.
+* CCTV does not show an intruder.
+* Access logs show no cabin entry.
+
+The murder weapon was effectively:
+
+> PART OF THE TRAIN.
+
+This must be the central twist.
+
+Do NOT reveal this early.
+
+---
+
+# 8. SQL DATABASE
+
+Create a case-specific SQLite dataset using the same database architecture already used by Going Dark.
+
+The following logical tables should exist, adapting naming/types to the existing architecture.
+
+## passengers
+
+Fields:
+
+* passenger_id
+* name
+* age
+* booking_class
+* status
+
+---
+
+## tickets
+
+Fields:
+
+* ticket_id
+* passenger_id
+* coach
+* cabin
+* boarding_station
+* destination
+* boarding_time
+
+---
+
+## cabin_assignments
+
+Fields:
+
+* cabin_id
+* passenger_id
+* assigned_from
+* assigned_to
+* access_level
+
+---
+
+## dining_transactions
+
+Fields:
+
+* transaction_id
+* passenger_id
+* timestamp
+* location
+* amount
+* item
+
+---
+
+## station_logs
+
+Fields:
+
+* passenger_id
+* station
+* event_type
+* timestamp
+
+---
+
+## cctv_metadata
+
+Fields:
+
+* camera_id
+* timestamp
+* event_type
+* subject_id
+* confidence
+
+---
+
+## train_sensors
+
+Fields:
+
+* timestamp
+* sensor
+* value
+* carriage
+* source
+
+---
+
+## maintenance_logs
+
+Fields:
+
+* timestamp
+* engineer_id
+* component
+* action
+* carriage
+
+---
+
+## access_logs
+
+Fields:
+
+* timestamp
+* credential_id
+* cabin_id
+* action
+* result
+
+---
+
+## medical_report
+
+Fields:
+
+* victim_id
+* estimated_window
+* cause
+* wound_description
+
+---
+
+# 9. DATASET QUALITY
+
+Do NOT create a tiny database where the answer is immediately obvious.
+
+The dataset must contain:
+
+* Innocent passenger records.
+* Multiple cabins.
+* Multiple coaches.
+* Normal dining transactions.
+* Normal CCTV records.
+* Routine maintenance logs.
+* Decoy maintenance records.
+* Multiple access records.
+* False-positive CCTV metadata.
+* Unimportant sensor events.
+* Several timestamps around 23:47.
+* Records from before and after the murder.
+* Plausible evidence against multiple suspects.
+
+The player should have to investigate.
+
+However, every clue required to logically prove the final solution must exist in the data.
+
+---
+
+# 10. SQL OBJECTIVE SYSTEM
+
+Every objective must have TWO levels of description.
+
+The data model should support something conceptually similar to:
+
+```ts
+{
+    generalObjective: "...",
+    detailedObjective: "...",
+    learningFocus: [...],
+    validation: ...
+}
+```
+
+Do not necessarily use these exact property names if the existing engine has its own schema.
+
+The important requirement is that every investigation step has:
+
+### GENERAL OBJECTIVE
+
+Explains what the detective needs to discover.
+
+Example:
+
+> Determine who was aboard the train and who had legitimate access to A-coach.
+
+### DETAILED OBJECTIVE
+
+Explains the exact programming task.
+
+Example:
+
+> Use SELECT and WHERE to find passengers assigned to coaches A, B and C. Include their cabin numbers.
+
+The detailed objective should teach SQL without simply giving away the answer.
+
+---
+
+# 11. SQL OBJECTIVES
+
+Implement these progressively.
+
+## SQL Stage 1 — Establish the Scene
+
+GENERAL:
+
+Determine who was aboard the train and who could legitimately access the relevant coaches.
+
+DETAILED:
+
+Use SELECT and WHERE to identify passengers assigned to coaches A, B and C and display their cabin numbers.
+
+Learning:
+
+* SELECT
+* WHERE
+* IN
+* basic JOIN
+
+---
+
+## SQL Stage 2 — Build the Victim's Evening
+
+GENERAL:
+
+Reconstruct Arvind Rao's movements before the murder.
+
+DETAILED:
+
+Join passengers with dining_transactions, filter for Arvind Rao, and sort the results chronologically.
+
+Learning:
+
+* JOIN
+* WHERE
+* ORDER BY
+
+---
+
+## SQL Stage 3 — Find Contradictions
+
+GENERAL:
+
+Find a suspect whose claimed movements do not match the train's records.
+
+DETAILED:
+
+Compare suspect movement information with station logs and CCTV metadata.
+
+Look for records that occur after a suspect claims they returned to their cabin.
+
+Learning:
+
+* multiple tables
+* aliases
+* timestamp filtering
+* logical reasoning
+
+---
+
+## SQL Stage 4 — The 11:47 Window
+
+GENERAL:
+
+Isolate everything that happened while the train was inside the tunnel.
+
+DETAILED:
+
+Filter train_sensors, cctv_metadata, access_logs and maintenance_logs between:
+
+23:47:00
+
+and
+
+23:52:00.
+
+Learning:
+
+* timestamp filtering
+* AND
+* ORDER BY
+
+---
+
+## SQL Stage 5 — The Impossible Access
+
+GENERAL:
+
+Prove whether anyone actually entered A-17 during the murder window.
+
+DETAILED:
+
+Search access_logs for A-17 between 23:47 and 23:52.
+
+Then compare the results against CCTV metadata.
+
+The expected discovery:
+
+No legitimate cabin access occurred.
+
+---
+
+## SQL Stage 6 — Follow the Infrastructure
+
+GENERAL:
+
+Determine whether a train component was manipulated before the murder.
+
+DETAILED:
+
+Search maintenance_logs for unusual A-coach actions during the 30 minutes before 23:47.
+
+Sort by timestamp.
+
+Distinguish routine maintenance from suspicious activity.
+
+---
+
+## SQL Stage 7 — Identify the Trigger
+
+GENERAL:
+
+Find the event that could connect a suspect to the mechanism responsible for the murder.
+
+DETAILED:
+
+Correlate maintenance_logs, train_sensors and access_logs.
+
+Look for:
+
+1. Security-console activity.
+2. Mechanical state change.
+3. Sensor anomaly.
+4. Correct carriage.
+5. Suspicious timestamp relationship.
+
+The player should now be able to identify Dev as the strongest suspect.
+
+---
+
+# 12. PYTHON INVESTIGATION MODE
+
+This is a NEW GAMEPLAY COMPONENT.
+
+Do not make Python feel like a separate unrelated programming lesson.
+
+Python exists because SQL has exposed a large amount of chronological telemetry that needs deeper analysis.
+
+The narrative transition should explain:
+
+> "The database tells you what happened. But there are too many individual events to reconstruct the sequence manually. Export the telemetry and analyze the timeline."
+
+The player should then enter the Python investigation environment.
+
+Reuse the existing editor infrastructure if possible.
+
+Do NOT add unnecessary dependencies.
+
+Use pure basic Python.
+
+No pandas.
+
+No NumPy.
+
+No external packages.
+
+No advanced Python.
+
+---
+
+# 13. PYTHON LEARNING PROGRESSION
+
+Teach these concepts in this order:
+
+1. File reading
+2. Lists
+3. Dictionaries
+4. for loops
+5. if statements
+6. Functions
+7. sorted()
+8. Combining concepts
+
+The player should learn each concept by solving a detective problem.
+
+---
+
+# 14. PYTHON STAGE 1 — READ THE EVIDENCE
+
+GENERAL:
+
+Load the exported train telemetry so it can be investigated.
+
+DETAILED:
+
+Open:
+
+`train_logs.txt`
+
+using:
+
+`with open(...)`
+
+Read the lines and store them in a list.
+
+Learning:
+
+* open()
+* with
+* readlines()
+* lists
+
+---
+
+# 15. PYTHON STAGE 2 — PARSE THE LOG
+
+GENERAL:
+
+Turn each raw log entry into structured evidence.
+
+DETAILED:
+
+Use a for loop.
+
+Split each log line using:
+
+`|`
+
+Create a dictionary containing:
+
+* time
+* system
+* event
+
+Append each dictionary to a list.
+
+Example structure:
+
+```python
+records = []
+
+for log in logs:
+    parts = log.strip().split("|")
+
+    record = {
+        "time": parts[0],
+        "system": parts[1],
+        "event": parts[2]
+    }
+
+    records.append(record)
+```
+
+IMPORTANT:
+
+This example may be shown as instructional scaffolding, but validation should allow equivalent correct solutions.
+
+---
+
+# 16. PYTHON STAGE 3 — FILTER THE TUNNEL
+
+GENERAL:
+
+Extract only events that happened while the train was inside the tunnel.
+
+DETAILED:
+
+Use:
+
+* a for loop
+* an if statement
+* a list
+
+to collect records between 23:47 and 23:52.
+
+Learning:
+
+* for
+* if
+* comparisons
+* lists
+
+---
+
+# 17. PYTHON STAGE 4 — SORT THE TIMELINE
+
+GENERAL:
+
+Create a reliable chronological sequence.
+
+DETAILED:
+
+Use sorted() with a key function to sort the dictionaries by the time field.
+
+Example:
+
+```python
+timeline = sorted(records, key=lambda x: x["time"])
+```
+
+Learning:
+
+* sorted()
+* key
+* dictionaries
+* chronological reasoning
+
+Do not require this exact code if equivalent code produces the correct output.
+
+---
+
+# 18. PYTHON STAGE 5 — CREATE A FUNCTION
+
+GENERAL:
+
+Create a reusable detective tool for retrieving events between two times.
+
+DETAILED:
+
+Create a function conceptually equivalent to:
+
+```python
+get_events(start, end, records)
+```
+
+The function should:
+
+* accept start time
+* accept end time
+* accept records
+* loop through the records
+* use if
+* return matching records
+
+Learning:
+
+* def
+* parameters
+* return
+* loops
+* conditions
+
+---
+
+# 19. PYTHON STAGE 6 — DETECT THE GAP
+
+GENERAL:
+
+Find the suspicious break in the electronic timeline.
+
+DETAILED:
+
+Iterate over the sorted timeline.
+
+Compare consecutive records.
+
+Identify where:
+
+* normal CCTV/access records stop behaving normally
+* a mechanical event appears
+* the sensor event occurs inside the murder window
+
+This should reveal the important sequence.
+
+---
+
+# 20. PYTHON STAGE 7 — RECONSTRUCT THE MURDER
+
+GENERAL:
+
+Use the complete chronological evidence to explain how Arvind was killed without anyone entering A-17.
+
+DETAILED:
+
+Write a reusable function that extracts and displays relevant events by carriage during the tunnel window.
+
+The output should allow the player to see a sequence similar to:
+
+```text
+23:46:51 SECURITY Dev Singh console access
+23:47:00 TRAIN Tunnel entry
+23:48:16 MAINTENANCE A-coach actuator state changed
+23:48:19 SENSOR A-17 service-line pressure spike
+23:48:20 SENSOR A-17 service-line pressure normal
+23:49:02 CCTV A-coach corridor low-light frame
+23:51:12 TRAIN Tunnel exit
+```
+
+The exact dataset can contain additional decoy events.
+
+---
+
+# 21. RAW PYTHON LOG
+
+Create a case-specific evidence file.
+
+Example format:
+
+```text
+23:44:18|DINING|Arvind Rao transaction completed
+23:45:03|CABIN|A-17 occupied
+23:46:51|SECURITY|Dev Singh console access
+23:47:00|TRAIN|Tunnel entry detected
+23:48:16|MAINTENANCE|A-coach actuator state changed
+23:48:19|SENSOR|A-17 service-line pressure spike
+23:48:20|SENSOR|A-17 service-line pressure normal
+23:49:02|CCTV|A-coach corridor low-light frame
+23:51:12|TRAIN|Tunnel exit approaching
+23:51:12|TRAIN|Tunnel exit detected
+```
+
+The production dataset MUST contain many additional decoy events.
+
+---
+
+# 22. PYTHON VALIDATION
+
+IMPORTANT:
+
+Do NOT validate Python objectives purely by exact source-code string matching.
+
+For example, do not require:
+
+```python
+for log in logs:
+```
+
+exactly.
+
+Instead, validate:
+
+* Did the player successfully read the file?
+* Did they produce a list?
+* Did they parse the records correctly?
+* Did they produce the required filtered records?
+* Did they sort the timeline?
+* Did their function return the expected events?
+* Did the output contain the required evidence?
+
+Accept multiple valid beginner implementations.
+
+The player should be rewarded for solving the problem, not copying one exact syntax pattern.
+
+---
+
+# 23. FINAL EVIDENCE SEQUENCE
+
+The final evidence should establish:
+
+### Evidence 1
+
+Arvind was alive shortly before the tunnel.
+
+### Evidence 2
+
+A-17 had no successful access during the murder window.
+
+### Evidence 3
+
+CCTV shows nobody entering.
+
+### Evidence 4
+
+A suspicious maintenance action occurred shortly before the murder.
+
+### Evidence 5
+
+Dev's security credential was used around the critical time.
+
+### Evidence 6
+
+The train sensor recorded an abnormal mechanical event.
+
+### Evidence 7
+
+The mechanical event happened during the estimated death window.
+
+### Evidence 8
+
+Python reconstruction connects these events chronologically.
+
+### Evidence 9
+
+The mechanism was associated with A-coach infrastructure.
+
+### Evidence 10
+
+The weapon therefore did not need to enter A-17.
+
+---
+
+# 24. FINAL ACCUSATION
+
+The player should not simply select:
+
+> "Dev Singh"
+
+and win.
+
+The final accusation should require multiple components.
+
+The player must answer:
+
+1. Who killed Arvind Rao?
+2. How was the cabin kept locked?
+3. What caused the fatal injury?
+4. Why was the weapon not found?
+5. Which evidence proves the suspect's alibi false?
+
+Expected answer:
+
+**Dev Singh.**
+
+Mechanism:
+
+A concealed retractable spike integrated into the train's service infrastructure was remotely activated.
+
+Cabin access:
+
+Nobody entered.
+
+Weapon:
+
+The weapon was already part of the train.
+
+Proof:
+
+Security-console activity + maintenance record + sensor anomaly + chronological Python reconstruction.
+
+---
+
+# 25. HINT SYSTEM
+
+Implement progressive hints.
+
+### Hint 1
+
+Look at the timestamps.
+
+### Hint 2
+
+The five-minute tunnel window is extremely important.
+
+### Hint 3
+
+Don't investigate every record equally.
+
+### Hint 4
+
+Compare different systems against each other.
+
+### Hint 5
+
+Look closely at maintenance activity.
+
+### Hint 6
+
+What could affect someone inside a locked cabin without someone entering?
+
+### Final Hint
+
+The weapon was already part of the train.
+
+Hints should become progressively more explicit.
+
+---
+
+# 26. DIFFICULTY SYSTEM
+
+The case must support two objective difficulty descriptions.
+
+## GENERAL / INVESTIGATOR MODE
+
+Objectives should be concise and detective-oriented.
+
+Example:
+
+> Reconstruct what happened inside the tunnel.
+
+The player has to determine how.
+
+---
+
+## DETAILED / LEARNING MODE
+
+Objectives should explicitly explain the programming operation.
+
+Example:
+
+> Create a for loop that examines each record. Use an if statement to keep only events occurring between 23:47 and 23:52.
+
+This should be the more instructional mode.
+
+If the existing game already has a difficulty system, integrate into it.
+
+Do NOT create a separate unrelated difficulty architecture.
+
+---
+
+# 27. RED HERRINGS
+
+The case should have meaningful red herrings.
+
+### Meera
+
+Strong motive.
+
+Her dinner argument makes her suspicious.
+
+But her timeline eventually clears her.
+
+### Kabir
+
+Business rivalry.
+
+Suspicious dining transaction.
+
+But chronology clears him.
+
+### Nikhil
+
+Has access to train systems.
+
+His maintenance activity looks suspicious.
+
+But his actions should be distinguishable from the murder trigger.
+
+### Ananya
+
+Ticket inconsistency.
+
+Potential secret.
+
+But unrelated to the murder.
+
+### Dev
+
+Appears to have the strongest opportunity only after the player correlates multiple datasets.
+
+This prevents the killer from being obvious from the beginning.
+
+---
+
+# 28. STORY PACING
+
+Do NOT dump the entire story at the beginning.
+
+Reveal information progressively.
+
+Recommended progression:
+
+```text
+Crime Scene
+↓
+Passenger Investigation
+↓
+Victim Timeline
+↓
+Suspect Investigation
+↓
+11:47 Tunnel
+↓
+Locked Cabin Contradiction
+↓
+Maintenance Anomaly
+↓
+Telemetry Export
+↓
+Python Analysis
+↓
+Chronological Reconstruction
+↓
+Security Credential
+↓
+Hidden Mechanism
+↓
+Final Accusation
+↓
+Reveal
+```
+
+The player should only understand the full murder method near the end.
+
+---
+
+# 29. UI / UX REQUIREMENTS
+
+Use the existing Going Dark visual language.
+
+Do NOT redesign the entire application.
+
+The Python section should visually feel like an extension of the investigation terminal.
+
+Clearly communicate the transition:
+
+> SQL INVESTIGATION → TELEMETRY ANALYSIS → PYTHON RECONSTRUCTION
+
+Possible UI elements:
+
+* Case objective panel
+* Evidence panel
+* SQL terminal/editor
+* Python terminal/editor
+* Query/output console
+* Timeline output
+* Hint button
+* Progress indicator
+* Evidence discovered indicator
+
+Follow existing components wherever possible.
+
+---
+
+# 30. PYTHON EDITOR
+
+If the existing Monaco editor is already being used and the current project architecture requires it, reuse it.
+
+If the repository already has a lighter editor abstraction, use that.
+
+Do NOT introduce a new heavy editor library solely for this case.
+
+The Python environment must support beginner code.
+
+---
+
+# 31. EXECUTION MODEL
+
+The project is intended to remain compatible with the current Going Dark architecture.
+
+Do NOT introduce:
+
+* a backend server
+* external Python execution service
+* remote code execution API
+* paid API
+* external AI API
+
+The Python gameplay must work client-side.
+
+If true Python execution is not currently available in-browser, inspect the existing architecture and implement the safest lightweight case-specific Python execution/validation approach compatible with the project.
+
+Prefer deterministic validation.
+
+Do not introduce a remote Python execution dependency.
+
+---
+
+# 32. DATA / STORY SEPARATION
+
+Keep the following separate where the existing architecture allows:
+
+```text
+case metadata
+story text
+suspects
+database seed data
+objectives
+hints
+Python evidence files
+validation rules
+final solution
+```
+
+Do not scatter case-specific strings throughout React components.
+
+The case should be maintainable and editable.
+
+---
+
+# 33. CASE OBJECTIVE STRUCTURE
+
+If creating or extending a case schema, aim for something conceptually like:
+
+```ts
+{
+    id: "GD-002",
+    title: "The 11:47 Train",
+
+    objectives: [
+        {
+            id: "sql-scene",
+            type: "sql",
+            generalObjective: "...",
+            detailedObjective: "...",
+            learningFocus: [
+                "SELECT",
+                "WHERE",
+                "JOIN"
+            ],
+            hints: [...]
+        },
+
+        {
+            id: "python-parse",
+            type: "python",
+            generalObjective: "...",
+            detailedObjective: "...",
+            learningFocus: [
+                "lists",
+                "dictionaries",
+                "for loops"
+            ],
+            hints: [...]
+        }
+    ]
+}
+```
+
+Adapt this to the existing project architecture instead of blindly introducing this exact schema.
+
+---
+
+# 34. COMPLETION CONDITIONS
+
+The case should only be considered solved when:
+
+* Required SQL evidence milestones are completed.
+* Python investigation milestones are completed.
+* The chronological reconstruction is successfully established.
+* The player identifies Dev Singh.
+* The player identifies the concealed train mechanism.
+* The final accusation is correct.
+
+Do not allow the player to skip directly to the ending simply by selecting the correct suspect.
+
+---
+
+# 35. FINAL REVEAL
+
+After a successful accusation, present the final explanation.
+
+The reveal should explain:
+
+Dev Singh had discovered that Arvind planned to expose him.
+
+Dev prepared a concealed mechanism inside A-coach.
+
+At approximately 11:46:51, his security credential interacts with the relevant system.
+
+At 11:47, the train enters the tunnel.
+
+At 11:48:16, the hidden actuator changes state.
+
+At 11:48:19, A-17 records the service-line pressure spike.
+
+At 11:48:20, the system returns to normal.
+
+The cabin never opens.
+
+Nobody enters.
+
+The weapon retracts.
+
+The weapon is still part of the train.
+
+Therefore the impossible locked-room murder was not solved by discovering who entered the room.
+
+It was solved by discovering what could reach the room without entering it.
+
+End with a strong case-completion line such as:
+
+> CASE CLOSED.
+>
+> The 11:47 Train was never a locked room.
+>
+> It was a weapon.
+
+---
+
+# 36. AUDIO / ATMOSPHERE
+
+Reuse existing Going Dark sound architecture.
+
+If available, use subtle:
+
+* train ambience
+* rail movement
+* tunnel rumble
+* distant announcement
+* keyboard/terminal sounds
+* investigation confirmation sounds
+
+Do NOT add large external audio assets unnecessarily.
+
+The tunnel transition should feel important.
+
+---
+
+# 37. PERFORMANCE
+
+Keep the case lightweight.
+
+Avoid:
+
+* huge datasets
+* unnecessary packages
+* duplicate assets
+* unnecessary dependencies
+* server infrastructure
+
+The case should remain suitable for the project's existing deployment target.
+
+---
+
+# 38. RESPONSIVENESS
+
+The case must work with the existing responsive UI.
+
+Ensure:
+
+* SQL editor remains usable.
+* Python editor remains usable.
+* Objective panel remains readable.
+* Timeline output does not overflow.
+* Tables/logs remain readable.
+* Mobile layout does not break if the existing game supports mobile.
+
+---
+
+# 39. TESTING REQUIREMENTS
+
+Before declaring the implementation complete, test:
+
+### Story
+
+* Case loads.
+* Intro displays correctly.
+* Suspects display correctly.
+* Narrative progression works.
+
+### SQL
+
+* Database seeds correctly.
+* Queries execute.
+* Required SQL milestones trigger.
+* Incorrect queries do not falsely complete objectives.
+* Multiple valid queries can complete the same objective.
+
+### Python
+
+* Evidence file loads.
+* Beginner Python workflow works.
+* Lists are validated.
+* Dictionaries are validated.
+* for loops are validated.
+* if filtering is validated.
+* sorted timeline is validated.
+* Functions are validated.
+* Final chronological output is validated.
+
+### Progression
+
+* Objectives unlock in correct order.
+* Hints work.
+* Player cannot bypass critical evidence.
+* Final accusation requires sufficient evidence.
+
+### Ending
+
+* Correct accusation succeeds.
+* Incorrect accusation gives appropriate feedback.
+* Final reveal is only shown after the correct solution.
+
+---
+
+# 40. IMPORTANT IMPLEMENTATION PRINCIPLES
+
+1. **Inspect before coding.**
+2. **Reuse the existing engine.**
+3. **Do not rebuild Going Dark.**
+4. **Do not break existing stories/cases.**
+5. **Keep case data modular.**
+6. **Make SQL investigation meaningful.**
+7. **Make Python investigation meaningful.**
+8. **Do not turn Python into a generic coding tutorial.**
+9. **Use programming concepts as detective tools.**
+10. **Allow multiple valid solutions where possible.**
+11. **Do not validate exact source code unnecessarily.**
+12. **Do not reveal the killer too early.**
+13. **Use red herrings.**
+14. **Make timestamps central to the mystery.**
+15. **The final solution must require chronological reasoning.**
+
+---
+
+# 41. EXPECTED END RESULT
+
+When finished, a player should be able to play Case #002 from beginning to end and experience:
+
+```text
+"I need to find the killer."
+        ↓
+"I need to understand the passengers."
+        ↓
+"Something doesn't match their alibis."
+        ↓
+"Nobody entered A-17."
+        ↓
+"Then how did Arvind die?"
+        ↓
+"Something happened during the tunnel."
+        ↓
+"The train's maintenance system is suspicious."
+        ↓
+"I need to reconstruct the telemetry."
+        ↓
+"Python can help me process these logs."
+        ↓
+"The events line up."
+        ↓
+"Dev's credential → actuator → sensor spike."
+        ↓
+"The weapon didn't enter the cabin."
+        ↓
+"The train itself delivered the attack."
+        ↓
+"Dev Singh is the killer."
+```
+
+That progression is the core design goal.
+
+---
+
+# 42. FINAL TASK
+
+Implement the complete case in the existing Going Dark repository.
+
+After implementation:
+
+1. Run the project's existing lint/typecheck/build/test commands.
+2. Fix all errors.
+3. Verify the case works from a fresh game state.
+4. Verify existing cases still work.
+5. Verify no unrelated functionality was broken.
+6. Review the implementation for unnecessary duplication.
+7. Ensure all case-specific data is modular and maintainable.
+
+At the end, provide a concise implementation report containing:
+
+* Files created.
+* Files modified.
+* New case architecture.
+* SQL database changes.
+* Python gameplay implementation.
+* Objective/validation implementation.
+* Testing performed.
+* Any remaining limitations.
+
+Do not stop after creating the story data.
+
+The objective is a **fully playable, integrated Case #002 inside the existing Going Dark game.**

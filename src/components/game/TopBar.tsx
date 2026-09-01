@@ -1,4 +1,3 @@
-"use client";
 
 import { Volume2, VolumeX, Gavel, ChevronLeft, Activity, Award, Check, Lock, ChevronRight, ChevronDown } from "lucide-react";
 import { useGameStore, useActiveStory, useDiscoveredEvidence, useScore } from "@/lib/game/store";
