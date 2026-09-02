@@ -75,6 +75,7 @@ interface GameStore {
   addTimelineEvent: (ev: TimelineEvent) => void;
   penalizeScore: (points: number) => void;
   resetActiveStory: () => void;
+  resetStory: (storyId: string) => void;
   _setHydrated: () => void;
 }
 
@@ -192,6 +193,15 @@ export const useGameStore = create<GameStore>()(
           return { progress: { ...s.progress, [s.activeStoryId]: emptyProgress(s.activeStoryId) }, stage: "briefing" };
         }),
 
+      resetStory: (storyId: string) =>
+        set((s) => {
+          const isActive = s.activeStoryId === storyId;
+          return {
+            progress: { ...s.progress, [storyId]: emptyProgress(storyId) },
+            ...(isActive ? { stage: "archive", activeStoryId: null } : {}),
+          };
+        }),
+
       penalizeScore: (points) =>
         set((s) => updateActiveProgress(s, (p) => ({ ...p, score: Math.max(0, p.score - points) }))),
 
@@ -199,7 +209,7 @@ export const useGameStore = create<GameStore>()(
     }),
     {
       name: "going-dark-save",
-      version: 4,
+      version: 5,
       skipHydration: true,
       onRehydrateStorage: () => (state) => { state?._setHydrated(); },
     },

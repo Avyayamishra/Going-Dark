@@ -84,12 +84,31 @@ export function LandingPage() {
           </p>
 
           {/* Case facts grid */}
-          <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-px bg-border/60 border border-border/60 rounded-sm overflow-hidden text-left">
-            <Fact label="Archive Status" value="ACTIVE" highlight />
-            <Fact label="Free Cases" value="1" />
-            <Fact label="Upcoming" value={`${STORY_REGISTRY.listAll().filter(m => m.accessType === "COMING_SOON").length}`} />
-            <Fact label="Total Cases" value={`${STORY_REGISTRY.listAll().length}`} />
-          </div>
+          {(() => {
+            const all = STORY_REGISTRY.listAll();
+            const freeCases = all.filter((m) => m.accessType === "FREE").length;
+            const upcoming = all.filter((m) => m.accessType === "COMING_SOON").length;
+            const totalTables = STORY_REGISTRY.listPlayable().reduce(
+              (sum, s) => sum + (s.database.schema?.length ?? s.database.tables.length),
+              0,
+            );
+            const totalRecords = STORY_REGISTRY.listPlayable().reduce(
+              (sum, s) => sum + s.database.tables.reduce((rs, t) => rs + t.rows.length, 0),
+              0,
+            );
+            return (
+              <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-px bg-border/60 border border-border/60 rounded-sm overflow-hidden text-left">
+                <Fact label="Archive Status" value="ACTIVE" highlight />
+                <Fact label="Free Cases" value={`${freeCases}`} />
+                <Fact label="Upcoming" value={`${upcoming}`} />
+                <Fact label="Total Cases" value={`${all.length}`} />
+                <div className="col-span-2 md:col-span-4 bg-card/60 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                  <span>{totalTables} tables across playable cases</span>
+                  <span>{totalRecords} records available</span>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Boot log */}
           <div className="mt-8 text-left mx-auto max-w-xl border border-border/60 bg-black/30 rounded-sm p-3 font-mono text-[11px] leading-relaxed text-muted-foreground min-h-[124px]">
@@ -147,7 +166,7 @@ export function LandingPage() {
 
           <div className="mt-10 flex items-center justify-center gap-2 text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">
             <Database className="size-3" />
-            <span>9 tables · 116 records · read-only replica</span>
+            <span>read-only replica · client-side sql.js engine</span>
           </div>
         </div>
       </div>

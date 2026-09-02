@@ -14,10 +14,14 @@ import {
   LayoutGrid,
   Clock3,
   ChevronRight,
+  TerminalSquare,
+  Code2,
 } from "lucide-react";
 import { TopBar } from "@/components/game/TopBar";
 import { SearchTerminal } from "@/components/game/SearchTerminal";
 import { QueryResults } from "@/components/game/QueryResults";
+import { PythonTerminal } from "@/components/game/PythonTerminal";
+import { PythonOutput } from "@/components/game/PythonOutput";
 import { DatabaseExplorer } from "@/components/game/DatabaseExplorer";
 import { CaseBrief } from "@/components/game/CaseBrief";
 import { InvestigationNotes } from "@/components/game/InvestigationNotes";
@@ -35,10 +39,12 @@ import { Button } from "@/components/ui/button";
 import { useGameStore, useActiveStory, useDiscoveredEvidence } from "@/lib/game/store";
 import { useAudio } from "@/hooks/use-audio";
 import type { QueryResult } from "@/lib/sql/client-engine";
+import type { PythonResult } from "@/lib/python/engine";
 import { cn } from "@/lib/utils";
 
 type LeftTab = "brief" | "suspects" | "database" | "notes" | "history";
 type RightTab = "evidence" | "board" | "timeline" | "leads" | "progress" | "hints";
+type IdeMode = "sql" | "python";
 
 const LEFT_TABS: { id: LeftTab; label: string; icon: React.ElementType }[] = [
   { id: "brief", label: "Brief", icon: FolderOpen },
@@ -60,8 +66,11 @@ const RIGHT_TABS: { id: RightTab; label: string; icon: React.ElementType }[] = [
 export function InvestigationDashboard() {
   const story = useActiveStory();
   const defaultTable = story?.database.schema?.[0]?.name ?? "suspects";
+  const [ide, setIde] = useState<IdeMode>("sql");
   const [sql, setSql] = useState<string>(`SELECT * FROM ${defaultTable};`);
+  const [python, setPython] = useState<string>("# Inspect the case data tables available to you\nprint(tables())\n");
   const [result, setResult] = useState<QueryResult | null>(null);
+  const [pythonResult, setPythonResult] = useState<PythonResult | null>(null);
   const [running, setRunning] = useState(false);
   const [leftTab, setLeftTab] = useState<LeftTab>("brief");
   const [rightTab, setRightTab] = useState<RightTab>("evidence");
@@ -75,6 +84,21 @@ export function InvestigationDashboard() {
   const handleResult = useCallback((r: QueryResult) => {
     setResult(r);
     setRunning(false);
+  }, []);
+
+  const handlePythonResult = useCallback((r: PythonResult) => {
+    setPythonResult(r);
+    setRunning(false);
+  }, []);
+
+  // When loading a query/code from a lead or objective, route to the right IDE.
+  const loadSql = useCallback((q: string) => {
+    setSql(q);
+    setIde("sql");
+  }, []);
+  const loadPython = useCallback((c: string) => {
+    setPython(c);
+    setIde("python");
   }, []);
 
   const prevDiscoveredRef = useRef(discoveredEvidence.length);
@@ -112,23 +136,37 @@ export function InvestigationDashboard() {
       <div className="flex-1 min-h-0 flex">
         <aside className="hidden lg:flex flex-col w-72 shrink-0 border-r border-border/60 bg-sidebar/30">
           <SidebarShell tabs={LEFT_TABS} active={leftTab} onChange={(t) => { play("click"); setLeftTab(t as LeftTab); }}>
-            <LeftContent tab={leftTab} onInsertQuery={(q) => setSql(q)} onRestoreQuery={(q) => setSql(q)} />
+            <LeftContent
+              tab={leftTab}
+              onInsertQuery={(q) => loadSql(q)}
+              onRestoreQuery={(q) => loadSql(q)}
+            />
           </SidebarShell>
         </aside>
 
         <section className="flex-1 min-w-0 flex flex-col">
           <ObjectiveBanner />
+          {/* IDE mode toggle */}
+          <IdeSwitch mode={ide} onChange={(m) => { play("click"); setIde(m); }} />
           <div className="flex-1 min-h-0">
             <PanelGroup direction="vertical" autoSaveId="investigation-panel">
               <Panel defaultSize={42} minSize={18} className="min-h-0">
                 <div className="h-full border-b border-border/60 bg-card/20">
-                  <SearchTerminal value={sql} onChange={setSql} onResult={handleResult} onRunningChange={setRunning} />
+                  {ide === "sql" ? (
+                    <SearchTerminal value={sql} onChange={setSql} onResult={handleResult} onRunningChange={setRunning} />
+                  ) : (
+                    <PythonTerminal value={python} onChange={setPython} onResult={handlePythonResult} onRunningChange={setRunning} />
+                  )}
                 </div>
               </Panel>
               <PanelResizeHandle className="h-1.5 bg-border/40 hover:bg-primary/40 transition-colors data-[resize-handle-active]:bg-primary" />
               <Panel defaultSize={58} minSize={20} className="min-h-0">
                 <div className="h-full bg-background/40">
-                  <QueryResults result={result} running={running} />
+                  {ide === "sql" ? (
+                    <QueryResults result={result} running={running} />
+                  ) : (
+                    <PythonOutput result={pythonResult} running={running} />
+                  )}
                 </div>
               </Panel>
             </PanelGroup>
@@ -137,7 +175,11 @@ export function InvestigationDashboard() {
 
         <aside className="hidden lg:flex flex-col w-80 shrink-0 border-l border-border/60 bg-sidebar/30">
           <SidebarShell tabs={RIGHT_TABS} active={rightTab} onChange={(t) => { play("click"); setRightTab(t as RightTab); }}>
-            <RightContent tab={rightTab} onLeadQuery={(q) => setSql(q)} />
+            <RightContent
+              tab={rightTab}
+              onLeadQuery={(q) => loadSql(q)}
+              onLeadPython={(c) => loadPython(c)}
+            />
           </SidebarShell>
         </aside>
       </div>
@@ -148,7 +190,11 @@ export function InvestigationDashboard() {
             <SheetTitle className="font-mono text-xs uppercase tracking-[0.2em]">Case Files</SheetTitle>
           </SheetHeader>
           <SidebarShell tabs={LEFT_TABS} active={leftTab} onChange={(t) => { setLeftTab(t as LeftTab); }}>
-            <LeftContent tab={leftTab} onInsertQuery={(q) => { setSql(q); setMobileLeft(false); }} onRestoreQuery={(q) => { setSql(q); setMobileLeft(false); }} />
+            <LeftContent
+              tab={leftTab}
+              onInsertQuery={(q) => { loadSql(q); setMobileLeft(false); }}
+              onRestoreQuery={(q) => { loadSql(q); setMobileLeft(false); }}
+            />
           </SidebarShell>
         </SheetContent>
       </Sheet>
@@ -158,7 +204,11 @@ export function InvestigationDashboard() {
             <SheetTitle className="font-mono text-xs uppercase tracking-[0.2em]">Investigation</SheetTitle>
           </SheetHeader>
           <SidebarShell tabs={RIGHT_TABS} active={rightTab} onChange={(t) => { setRightTab(t as RightTab); }}>
-            <RightContent tab={rightTab} onLeadQuery={(q) => setSql(q)} />
+            <RightContent
+              tab={rightTab}
+              onLeadQuery={(q) => loadSql(q)}
+              onLeadPython={(c) => loadPython(c)}
+            />
           </SidebarShell>
         </SheetContent>
       </Sheet>
@@ -171,17 +221,29 @@ export function InvestigationDashboard() {
 function SidebarShell({ tabs, active, onChange, children }: { tabs: { id: string; label: string; icon: React.ElementType }[]; active: string; onChange: (id: string) => void; children: React.ReactNode; }) {
   return (
     <>
-      <div className="flex items-center border-b border-border/60 bg-card/30 shrink-0">
+      <div className="flex items-center bg-card/30 shrink-0 relative">
         {tabs.map((t) => {
           const Icon = t.icon;
           const isActive = active === t.id;
           return (
-            <button key={t.id} onClick={() => onChange(t.id)} className={cn("flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors", isActive ? "text-primary border-b border-primary" : "text-muted-foreground hover:text-foreground border-b border-transparent")}>
+            <button
+              key={t.id}
+              onClick={() => onChange(t.id)}
+              className={cn(
+                "relative flex-1 flex flex-col items-center gap-0.5 py-2 transition-colors",
+                isActive ? "text-primary" : "text-muted-foreground hover:text-foreground",
+              )}
+            >
               <Icon className="size-3.5" />
               <span className="font-mono text-[9px] uppercase tracking-wider">{t.label}</span>
+              {isActive && (
+                <span className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-t-sm" />
+              )}
             </button>
           );
         })}
+        {/* Single shared bottom border under all tabs */}
+        <span className="absolute bottom-0 left-0 right-0 h-px bg-border/60 pointer-events-none" />
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">{children}</div>
     </>
@@ -196,12 +258,33 @@ function LeftContent({ tab, onInsertQuery, onRestoreQuery }: { tab: LeftTab; onI
   return <QueryHistory onRestore={onRestoreQuery} />;
 }
 
-function RightContent({ tab, onLeadQuery }: { tab: RightTab; onLeadQuery: (sql: string) => void }) {
+function RightContent({
+  tab,
+  onLeadQuery,
+  onLeadPython,
+}: {
+  tab: RightTab;
+  onLeadQuery: (sql: string) => void;
+  onLeadPython: (code: string) => void;
+}) {
   if (tab === "evidence") return <div className="h-full overflow-auto"><EvidencePanel /></div>;
   if (tab === "board") return <div className="h-full overflow-auto"><EvidenceBoard /></div>;
   if (tab === "timeline") return <div className="h-full overflow-auto"><InvestigationTimeline /></div>;
-  if (tab === "leads") return <div className="h-full overflow-auto"><InvestigationLeads onRunQuery={onLeadQuery} /></div>;
-  if (tab === "progress") return <div className="h-full overflow-auto"><InvestigationProgress onLoadQuery={(q) => onLeadQuery(q)} /></div>;
+  if (tab === "leads") return (
+    <div className="h-full overflow-auto">
+      <InvestigationLeads onRunQuery={onLeadQuery} onRunPython={onLeadPython} />
+    </div>
+  );
+  if (tab === "progress") {
+    return (
+      <div className="h-full overflow-auto">
+        <InvestigationProgress
+          onLoadQuery={(q) => onLeadQuery(q)}
+          onLoadPython={(c) => onLeadPython(c)}
+        />
+      </div>
+    );
+  }
   return <div className="h-full overflow-auto"><HintPanel /></div>;
 }
 
@@ -224,6 +307,9 @@ function ObjectiveBanner() {
             {allDone ? "ALL OBJECTIVES COMPLETE" : "Current Objective"}
           </span>
           {current && <span className="text-[9px] font-mono text-muted-foreground/60">{current.id}</span>}
+          {current?.language === "python" && (
+            <span className="text-[8px] font-mono uppercase tracking-wider px-1 py-0.5 border border-primary/40 text-primary bg-primary/5 rounded-sm">PYTHON</span>
+          )}
         </div>
         <p className="font-mono text-xs text-foreground/90 truncate">
           {allDone ? "You have enough to make an accusation." : current?.description ?? "No objectives."}
@@ -235,6 +321,39 @@ function ObjectiveBanner() {
           <ChevronRight className="size-3" />
         </div>
       )}
+    </div>
+  );
+}
+
+/** SQL / Python IDE switcher. */
+function IdeSwitch({ mode, onChange }: { mode: IdeMode; onChange: (m: IdeMode) => void }) {
+  return (
+    <div className="border-b border-border/60 bg-card/30 px-3 py-1.5 flex items-center justify-between gap-2 shrink-0">
+      <div className="inline-flex items-center rounded-sm border border-border/60 bg-black/20 p-0.5">
+        <button
+          onClick={() => onChange("sql")}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer",
+            mode === "sql" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <TerminalSquare className="size-3" />
+          SQL IDE
+        </button>
+        <button
+          onClick={() => onChange("python")}
+          className={cn(
+            "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-sm font-mono text-[10px] uppercase tracking-wider transition-colors cursor-pointer",
+            mode === "python" ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Code2 className="size-3" />
+          Python IDE
+        </button>
+      </div>
+      <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/60 hidden sm:block">
+        {mode === "sql" ? "Query the records database" : "Analyse case data with Python"}
+      </div>
     </div>
   );
 }

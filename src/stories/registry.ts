@@ -7,17 +7,17 @@
 import type { Story, StoryMetadata } from "./types";
 import { CASE_001 } from "./case-001";
 import { CASE_002 } from "./case-002";
-import { CASE_003 } from "./case-003";
+import { CASE_003_METADATA } from "./case-003/metadata";
 
 /**
  * All playable stories (full Story objects with database + evidence + etc.).
  */
-const PLAYABLE_STORIES: Story[] = [CASE_001, CASE_002, CASE_003];
+const PLAYABLE_STORIES: Story[] = [CASE_001, CASE_002];
 
 /**
  * Metadata-only entries for stories that are not yet playable (COMING_SOON).
  */
-const COMING_SOON_METADATA: StoryMetadata[] = [];
+const COMING_SOON_METADATA: StoryMetadata[] = [CASE_003_METADATA];
 
 export interface StoryRegistry {
   /** All stories (playable + coming-soon), metadata only. */

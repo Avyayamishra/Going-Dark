@@ -8,18 +8,12 @@ import { Button } from "@/components/ui/button";
 // Story-specific briefing beats for each case.
 const CASE_BEATS: Record<string, { icon: React.ElementType; label: string; text: string }[]> = {
   "case-001": [
-    { icon: Clock, label: "11:47 PM", text: "The victim is found dead inside the private archive. There are no obvious signs of forced entry." },
-    { icon: Radio, label: "MISSING DEVICE", text: "The victim's mobile phone is missing. The last carrier ping registered near the scene shortly before death." },
-    { icon: Database, label: "WIPED TERMINAL", text: "The workstation has been wiped. Local recovery of the night's activity is not possible." },
-    { icon: Eye, label: "CAMERA GAP", text: "One security camera — the one covering the scene — stopped recording shortly before the death. No footage exists for the critical window." },
-  ],
-  "case-002": [
     { icon: Satellite, label: "02:13 UTC", text: "Encrypted Russian military satellite KOSMOS-9147 briefly disappeared from its assigned orbital network. For exactly seven minutes and forty-two seconds, it transmitted an impossible signal." },
     { icon: Lock, label: "LEGITIMATE CREDENTIAL", text: "The authentication used a valid Russian authorization certificate (RUS-77A). The credential was technically active and belonged to a Colonel who was hundreds of kilometers away." },
     { icon: ShieldAlert, label: "IMPOSSIBLE ACCESS", text: "Russian authorities claim a routine telemetry malfunction. The IMF believes someone used the missing seven minutes to extract a classified orbital communication key." },
     { icon: Eye, label: "FALSE TRAIL", text: "Agent Ethan Hunt was assigned to investigate — but his movements during the incident are inconsistent with his mission. Someone deliberately inserted him into the trail." },
   ],
-  "case-003": [
+  "case-002": [
     { icon: Train, label: "11:47 PM", text: "The Maharaja Meridian luxury train enters Khandala Tunnel. When it emerges four minutes later, billionaire Arvind Rao is dead inside locked cabin A-17." },
     { icon: KeyRound, label: "LOCKED CABIN", text: "The cabin door was latched from inside. The window is sealed. CCTV shows no person entering A-17. No weapon is found inside." },
     { icon: Wrench, label: "IMPOSSIBLE CRIME", text: "The initial assumption: nobody could have entered. The player must determine whether that assumption is actually correct." },
@@ -99,7 +93,7 @@ export function CaseIntroduction() {
             }`}
           >
             <div className="text-[11px] font-mono uppercase tracking-[0.25em] text-primary">
-              {storyId === "case-002" || storyId === "case-003" ? "Incident Window" : "Estimated Time of Death"}
+              Incident Window
             </div>
             <div className="mt-1 font-mono text-2xl text-foreground">{meta.timeOfDeath}</div>
             <div className="mt-1 text-xs font-mono text-muted-foreground">{meta.incidentDate}</div>
@@ -114,7 +108,7 @@ export function CaseIntroduction() {
             <div className="flex items-center gap-2 mb-4">
               <Users className="size-4 text-primary" />
               <h2 className="font-mono text-sm uppercase tracking-[0.2em]">
-                {storyId === "case-002" ? "Agents of Interest" : "Persons of Interest"}
+                {storyId === "case-001" ? "Agents of Interest" : "Persons of Interest"}
               </h2>
               <div className="flex-1 h-px bg-border/60" />
               <span className="text-[11px] font-mono text-muted-foreground">{suspects.length}</span>
@@ -146,7 +140,7 @@ export function CaseIntroduction() {
               Investigation Objective
             </div>
             <p className="mt-2 font-mono text-sm text-foreground/90 leading-relaxed">
-              {storyId === "case-002" ? (
+              {storyId === "case-001" ? (
                 <>
                   You have been granted access to the IMF investigation database. Cross-reference the records to determine:
                 </>
@@ -157,13 +151,13 @@ export function CaseIntroduction() {
               )}
             </p>
             <ul className="mt-3 space-y-1.5 font-mono text-sm">
-              {storyId === "case-002" ? (
+              {storyId === "case-001" ? (
                 <>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHO accessed the satellite?</li>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> HOW did they obtain the credentials?</li>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHY was Ethan Hunt inserted into the trail?</li>
                 </>
-              ) : storyId === "case-003" ? (
+              ) : storyId === "case-002" ? (
                 <>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHO killed Arvind Rao?</li>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> HOW did the murder happen inside a locked cabin?</li>
@@ -171,7 +165,7 @@ export function CaseIntroduction() {
                 </>
               ) : (
                 <>
-                  <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHO killed Elias Voss?</li>
+                  <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHO is responsible?</li>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> HOW was it done?</li>
                   <li className="flex items-center gap-2 text-primary"><ChevronRight className="size-3.5" /> WHY?</li>
                 </>

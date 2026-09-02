@@ -3,7 +3,6 @@ import { useCallback } from "react";
 import { useGameStore, useActiveStory, useDiscoveredEvidence, useCompletedObjectives } from "@/lib/game/store";
 import { useAudio } from "@/hooks/use-audio";
 import type { EvidenceTriggerContext } from "@/stories/types";
-import { discoverEvidenceFromResult } from "@/stories/case-001/triggers";
 import { executeQuery } from "@/lib/sql/client-engine";
 import type { QueryResult } from "@/lib/sql/client-engine";
 

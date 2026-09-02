@@ -1,11 +1,24 @@
 
-import { Archive, Lock, ChevronLeft, Volume2, VolumeX, CheckCircle2, Play, Clock } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Archive, Lock, ChevronLeft, Volume2, VolumeX, CheckCircle2, Play, Clock, Search, RotateCcw, X } from "lucide-react";
 import { useGameStore } from "@/lib/game/store";
 import { STORY_REGISTRY } from "@/stories/registry";
 import { LocalStoryAccessProvider } from "@/stories/access";
 import { useAudio } from "@/hooks/use-audio";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
 import type { StoryMetadata } from "@/stories/types";
 import { cn } from "@/lib/utils";
 
@@ -23,6 +36,31 @@ export function CaseArchive() {
   const progress = useGameStore((s) => s.progress);
   const { audioEnabled, toggleAudio, audioVolume, setVolume, play } = useAudio();
   const allStories = STORY_REGISTRY.listAll();
+  const [query, setQuery] = useState("");
+  const [confirmReset, setConfirmReset] = useState<StoryMetadata | null>(null);
+  const resetStory = useGameStore((s) => s.resetStory);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return allStories;
+    return allStories.filter((m) => {
+      const haystack = [
+        m.caseNumber, m.title, m.tagline, m.description, m.victim, m.victimRole,
+        m.location, m.incidentDate, m.slug, m.difficulty,
+      ].join(" ").toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [allStories, query]);
+
+  const handleReset = (meta: StoryMetadata) => {
+    resetStory(meta.id);
+    play("click");
+    toast({
+      title: "Progress reset",
+      description: `${meta.title} progress has been cleared.`,
+    });
+    setConfirmReset(null);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -41,13 +79,13 @@ export function CaseArchive() {
             }}
             variant="ghost"
             size="sm"
-            className="font-mono text-[11px] uppercase tracking-wider h-8"
+            className="font-mono text-[11px] uppercase tracking-wider h-8 cursor-pointer"
           >
             <ChevronLeft className="size-3.5" /> Back
           </Button>
           <button
             onClick={toggleAudio}
-            className="inline-flex items-center justify-center size-8 rounded-sm border border-border/60 hover:border-primary/50 hover:text-primary transition-colors"
+            className="inline-flex items-center justify-center size-8 rounded-sm border border-border/60 hover:border-primary/50 hover:text-primary transition-colors cursor-pointer"
             aria-label={audioEnabled ? "Mute" : "Unmute"}
           >
             {audioEnabled ? <Volume2 className="size-3.5" /> : <VolumeX className="size-3.5" />}
@@ -77,23 +115,60 @@ export function CaseArchive() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {allStories.map((meta) => (
-              <CaseCard
-                key={meta.id}
-                meta={meta}
-                progress={progress[meta.id]}
-                onSelect={() => {
-                  if (!accessProvider.canAccessStorySync(meta)) {
-                    play("error");
-                    return;
-                  }
-                  play("click");
-                  selectStory(meta.id);
-                }}
-              />
-            ))}
+          {/* Search bar */}
+          <div className="mb-6 relative max-w-xl mx-auto">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={query}
+              onChange={(e) => { setQuery(e.target.value); }}
+              placeholder="Search cases by title, victim, location, difficulty..."
+              className="h-10 pl-9 pr-9 font-mono text-xs uppercase tracking-wider bg-black/20 border-border/60 focus-visible:border-primary/50"
+            />
+            {query && (
+              <button
+                onClick={() => { play("click"); setQuery(""); }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 size-6 inline-flex items-center justify-center rounded-sm hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+            <div className="mt-1.5 text-center text-[10px] font-mono uppercase tracking-widest text-muted-foreground/60">
+              {filtered.length} {filtered.length === 1 ? "case" : "cases"} {query ? "matched" : "archived"}
+            </div>
           </div>
+
+          {filtered.length === 0 ? (
+            <div className="text-center py-16 fade-up">
+              <Search className="size-8 text-muted-foreground/40 mx-auto" />
+              <div className="mt-3 font-mono text-xs uppercase tracking-[0.3em] text-muted-foreground">No matches</div>
+              <p className="mt-1 text-[11px] font-mono text-muted-foreground/60">
+                No case files match "{query}". Try a different keyword.
+              </p>
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((meta) => (
+                <CaseCard
+                  key={meta.id}
+                  meta={meta}
+                  progress={progress[meta.id]}
+                  onSelect={() => {
+                    if (!accessProvider.canAccessStorySync(meta)) {
+                      play("error");
+                      return;
+                    }
+                    play("click");
+                    selectStory(meta.id);
+                  }}
+                  onReset={() => {
+                    play("click");
+                    setConfirmReset(meta);
+                  }}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -103,6 +178,33 @@ export function CaseArchive() {
           <span>{allStories.length} cases archived</span>
         </div>
       </footer>
+
+      <AlertDialog open={confirmReset !== null} onOpenChange={(open) => !open && setConfirmReset(null)}>
+        <AlertDialogContent className="bg-card border-border/80">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-mono text-sm uppercase tracking-[0.2em] text-primary">
+              Reset case progress?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-xs font-mono text-muted-foreground leading-relaxed">
+              {confirmReset && (
+                <>
+                  This will permanently delete all progress for <span className="text-foreground">{confirmReset.title}</span>:
+                  discovered evidence, completed objectives, notes, score, and accusation history. This cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-mono text-xs uppercase tracking-wider cursor-pointer">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => confirmReset && handleReset(confirmReset)}
+              className="font-mono text-xs uppercase tracking-wider bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+            >
+              Reset progress
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -111,10 +213,12 @@ function CaseCard({
   meta,
   progress,
   onSelect,
+  onReset,
 }: {
   meta: StoryMetadata;
   progress?: { completed?: boolean; started?: boolean; score?: number };
   onSelect: () => void;
+  onReset: () => void;
 }) {
   const accessLabel = accessProvider.accessLabel(meta);
   const canAccess = accessProvider.canAccessStorySync(meta);
@@ -128,10 +232,9 @@ function CaseCard({
       className={cn(
         "group relative border rounded-sm overflow-hidden transition-all flex flex-col",
         canAccess
-          ? "border-border/60 bg-card/40 hover:border-primary/50 hover:bg-card/60 cursor-pointer"
+          ? "border-border/60 bg-card/40 hover:border-primary/50 hover:bg-card/60"
           : "border-border/40 bg-card/20 opacity-70",
       )}
-      onClick={canAccess ? onSelect : undefined}
     >
       {/* Status bar */}
       <div
@@ -141,7 +244,18 @@ function CaseCard({
         )}
       />
 
-      <div className="p-4 flex-1 flex flex-col">
+      <div
+        className="p-4 flex-1 flex flex-col"
+        onClick={canAccess ? onSelect : undefined}
+        onKeyDown={(e) => {
+          if (canAccess && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            onSelect();
+          }
+        }}
+        role={canAccess ? "button" : undefined}
+        tabIndex={canAccess ? 0 : -1}
+      >
         {/* Case number + difficulty */}
         <div className="flex items-center justify-between mb-2">
           <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary">{meta.caseNumber}</span>
@@ -195,13 +309,62 @@ function CaseCard({
               <span className="font-mono text-[10px] text-muted-foreground/60 tabular-nums">{progress.score} pts</span>
             )}
           </div>
-          {canAccess && !isComingSoon && (
+          {/* Continue / Reset actions for cases in progress */}
+          {isInProgress && (
+            <div className="mt-2 grid grid-cols-[1fr_auto] gap-1.5">
+              <Button
+                onClick={(e) => { e.stopPropagation(); onSelect(); }}
+                size="sm"
+                className="font-mono uppercase tracking-wider text-[11px] h-8 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
+              >
+                <Play className="size-3" />
+                Continue
+              </Button>
+              <Button
+                onClick={(e) => { e.stopPropagation(); onReset(); }}
+                variant="outline"
+                size="sm"
+                className="font-mono uppercase tracking-wider text-[11px] h-8 px-2 cursor-pointer"
+                title="Reset case progress"
+              >
+                <RotateCcw className="size-3" />
+                Reset
+              </Button>
+            </div>
+          )}
+          {/* Completed: replay + reset */}
+          {isCompleted && (
+            <div className="mt-2 grid grid-cols-[1fr_auto] gap-1.5">
+              <Button
+                onClick={(e) => { e.stopPropagation(); onSelect(); }}
+                size="sm"
+                variant="outline"
+                className="font-mono uppercase tracking-wider text-[11px] h-8 cursor-pointer"
+              >
+                <CheckCircle2 className="size-3" />
+                Replay
+              </Button>
+              <Button
+                onClick={(e) => { e.stopPropagation(); onReset(); }}
+                variant="outline"
+                size="sm"
+                className="font-mono uppercase tracking-wider text-[11px] h-8 px-2 cursor-pointer"
+                title="Reset case progress"
+              >
+                <RotateCcw className="size-3" />
+                Reset
+              </Button>
+            </div>
+          )}
+          {/* Fresh case */}
+          {canAccess && !isComingSoon && !isInProgress && !isCompleted && (
             <div className="mt-2">
               <Button
+                onClick={(e) => { e.stopPropagation(); onSelect(); }}
                 size="sm"
-                className="w-full font-mono uppercase tracking-wider text-[11px] h-8 bg-primary text-primary-foreground hover:bg-primary/90"
+                className="w-full font-mono uppercase tracking-wider text-[11px] h-8 bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer"
               >
-                {isCompleted ? "Replay" : isInProgress ? "Continue" : "Begin"}
+                Begin Investigation
               </Button>
             </div>
           )}
@@ -215,4 +378,3 @@ function CaseCard({
     </div>
   );
 }
-

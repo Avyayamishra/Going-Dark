@@ -10,120 +10,96 @@ function anyRow(pred: (row: Record<string, unknown>) => boolean, rows: Record<st
 export const CASE_002_EVIDENCE_TRIGGERS: EvidenceTrigger[] = [
   {
     evidenceId: "EVD-001",
-    name: "Seven-Minute Telemetry Gap",
-    description: "KOSMOS-9147's telemetry record shows a gap between 02:13 and 02:21 UTC.",
-    category: "SECURITY",
-    significance: "Proves the satellite was tampered with during a specific window.",
+    name: "Arvind's Last Dining Record",
+    description: "Arvind Rao's final dining transaction at 23:15 places him alive before returning to A-17.",
+    category: "MOVEMENT",
+    significance: "Establishes the victim was alive shortly before the tunnel.",
     test: (c) =>
-      c.tableName === "satellite_events" &&
-      /02:1[3-9]|02:2[0-1]|between/i.test(c.sqlUpper) &&
+      c.tableName === "dining_transactions" &&
+      anyRow((r) => rowHas(r, "passenger_id", "P006"), c.rows) &&
       c.rowCount > 0,
   },
   {
     evidenceId: "EVD-002",
-    name: "RUS-77A Authentication",
-    description: "Access ID RUS-77A successfully authenticated with KOSMOS-9147 during the incident.",
+    name: "Locked Cabin — No Access",
+    description: "Access logs show A-17 was locked and all unlock attempts during the murder window were DENIED.",
     category: "SECURITY",
-    significance: "Identifies the credential used in the breach.",
+    significance: "The locked-room paradox: the murder happened without cabin entry.",
     test: (c) =>
-      (c.tableName === "access_logs" && /rus-77a/i.test(c.sqlUpper) && c.rowCount > 0) ||
-      anyRow((r) => String(r.access_id ?? "").toUpperCase() === "RUS-77A", c.rows),
+      c.tableName === "access_logs" &&
+      /a-17/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
   {
     evidenceId: "EVD-003",
-    name: "Sokolov's Credential Ownership",
-    description: "Credential RUS-77A officially belongs to Colonel Viktor Sokolov (AGT-001).",
+    name: "CCTV Low-Light During Tunnel",
+    description: "CCTV shows no person entering A-17 during the tunnel.",
     category: "SECURITY",
-    significance: "Links the access ID to Sokolov.",
+    significance: "Corroborates that no one physically entered A-17.",
     test: (c) =>
-      c.tableName === "credentials" &&
-      /rus-77a/i.test(c.sqlUpper) &&
+      c.tableName === "cctv_metadata" &&
+      /23:4[789]|23:5[012]|low_light/i.test(c.sqlUpper) &&
       c.rowCount > 0,
   },
   {
     evidenceId: "EVD-004",
-    name: "Sokolov's Location Contradiction",
-    description: "Sokolov was at a different location during the incident — someone else used his credential.",
-    category: "MOVEMENT",
-    significance: "Proves Sokolov did not personally use RUS-77A.",
+    name: "Suspicious Maintenance Action",
+    description: "A maintenance log at 23:48:16 shows STATE_CHANGE on ACTUATOR in A-coach during the tunnel.",
+    category: "SECURITY",
+    significance: "A mechanical component was manipulated during the murder window.",
     test: (c) =>
-      c.tableName === "agent_movements" &&
-      /agt-001|sokolov/i.test(c.sqlUpper) &&
-      c.rowCount >= 2,
+      (c.tableName === "maintenance_logs" && /state_change|actuator/i.test(c.sqlUpper) && c.rowCount > 0) ||
+      (c.tableName === "maintenance_logs" && /carriage.*a|a.*coach/i.test(c.sqlUpper) && c.rowCount >= 3),
   },
   {
     evidenceId: "EVD-005",
-    name: "Anya-Dmitri Communication Pattern",
-    description: "Anya Petrova and Dmitri Volkov communicated 8 times before the incident.",
-    category: "COMMUNICATION",
-    significance: "Establishes coordination between two suspects.",
-    test: (c) => {
-      if (c.tableName !== "communications") return false;
-      const anyaDmitri = anyRow(
-        (r) =>
-          (rowHas(r, "sender_id", "AGT-003") && rowHas(r, "receiver_id", "AGT-004")) ||
-          (rowHas(r, "sender_id", "AGT-004") && rowHas(r, "receiver_id", "AGT-003")),
-        c.rows,
-      );
-      const hasGroupBy = /group\s+by/i.test(c.sqlUpper);
-      const showsPairAggregation = hasGroupBy && c.rowCount >= 1;
-      return anyaDmitri || showsPairAggregation;
-    },
+    name: "A-17 Pressure Spike",
+    description: "Train sensor at 23:48:19 recorded a PRESSURE SPIKE on A-17 service line.",
+    category: "SECURITY",
+    significance: "An abnormal mechanical event occurred inside A-17 during the death window.",
+    test: (c) =>
+      c.tableName === "train_sensors" &&
+      /pressure|spike/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
   {
     evidenceId: "EVD-006",
-    name: "TR-914 Financial Pattern",
-    description: "Anya Petrova received 5 payments tagged TR-914.",
-    category: "FINANCIAL",
-    significance: "Provides motive: payment for the satellite operation.",
+    name: "Dev's Security Console Access",
+    description: "Access log at 23:46:51 shows credential DEV-Sec accessing the SECURITY-CONSOLE.",
+    category: "SECURITY",
+    significance: "Directly contradicts Dev's alibi. His credential was used seconds before the tunnel.",
     test: (c) =>
-      c.tableName === "financial_records" &&
-      /tr-914/i.test(c.sqlUpper) &&
-      c.rowCount >= 3,
+      (c.tableName === "access_logs" && /dev-sec/i.test(c.sqlUpper) && c.rowCount > 0) ||
+      anyRow((r) => String(r.credential_id ?? "").toUpperCase() === "DEV-SEC", c.rows),
   },
   {
     evidenceId: "EVD-007",
-    name: "TR-914 Cross-Table References",
-    description: "TR-914 appears in both financial_records and communications message hashes.",
-    category: "COMMUNICATION",
-    significance: "Connects financial payments to communications.",
+    name: "Actuator Deployed and Retracted",
+    description: "Train sensors show ACTUATOR_STATE changed to DEPLOYED at 23:48:16 and RETRACTED at 23:48:21.",
+    category: "SECURITY",
+    significance: "A concealed mechanism was deployed and retracted during the murder.",
     test: (c) =>
-      c.tableName === "communications" &&
-      /tr-914/i.test(c.sqlUpper) &&
+      c.tableName === "train_sensors" &&
+      /actuator/i.test(c.sqlUpper) &&
       c.rowCount > 0,
   },
   {
     evidenceId: "EVD-008",
-    name: "Identity Trail Manipulation",
-    description: "RUS-77A was used to claim 4 different identities.",
-    category: "SECURITY",
-    significance: "Proves the identity trail was deliberately manipulated.",
-    test: (c) =>
-      c.tableName === "identity_events" &&
-      (/count.*distinct|group\s+by/i.test(c.sqlUpper)) &&
-      (c.rowCount > 0 || /rus-77a/i.test(c.sqlUpper)),
+    name: "Medical Report — Mechanism Wound",
+    description: "The medical report describes the wound as consistent with a retractable mechanism.",
+    category: "PHYSICAL",
+    significance: "Corroborates that the weapon was a mechanical device.",
+    test: (c) => c.tableName === "medical_report" && c.rowCount > 0,
   },
   {
     evidenceId: "EVD-009",
-    name: "Anya's Location at Uplink Facility",
-    description: "Anya Petrova was at the Plesetsk Uplink Station during the entire incident window.",
+    name: "Kabir's Suspicious Dining Charge",
+    description: "Kabir Malhotra has a dining transaction at 23:38 in the Service Corridor.",
     category: "MOVEMENT",
-    significance: "Places Anya at the scene of the satellite breach.",
+    significance: "Red herring — places Kabir near a service area but chronology clears him.",
     test: (c) =>
-      c.tableName === "agent_movements" &&
-      /agt-003|petrova/i.test(c.sqlUpper) &&
-      c.rowCount >= 2,
-  },
-  {
-    evidenceId: "EVD-010",
-    name: "Ethan Hunt's False Trail",
-    description: "Ethan Hunt's movements contradict his mission assignment.",
-    category: "MOVEMENT",
-    significance: "Reveals Ethan was deliberately inserted to create a false trail.",
-    test: (c) =>
-      c.tableName === "mission_records" &&
-      /agt-002|ethan/i.test(c.sqlUpper) &&
-      c.rowCount > 0,
+      c.tableName === "dining_transactions" &&
+      anyRow((r) => /service corridor/i.test(String(r.location ?? "")), c.rows),
   },
 ];
 

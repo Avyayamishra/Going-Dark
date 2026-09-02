@@ -1,0 +1,826 @@
+     1→
+     2→/**
+     3→ * Client-side SQL execution engine — runs entirely in the browser.
+     4→ *
+     5→ * Uses sql.js (pure WASM SQLite) loaded from the static WASM file in /public.
+     6→ * No backend, no API calls. The database is created in-memory from the active
+     7→ * story's seed data.
+     8→ *
+     9→ * This makes the game fully self-contained: the database is local to the game,
+    10→ * not outsourced to a backend.
+    11→ */
+    12→import initSqlJs, { type Database, type SqlValue } from "sql.js";
+    13→import { STORY_REGISTRY } from "@/stories/registry";
+    14→import type { SeedTable } from "@/stories/types";
+    15→
+    16→export type QueryRow = Record<string, unknown>;
+    17→
+    18→export interface QuerySuccess {
+    19→  ok: true;
+    20→  columns: string[];
+    21→  rows: QueryRow[];
+    22→  rowCount: number;
+    23→  executionTimeMs: number;
+    24→  truncated: boolean;
+    25→}
+    26→
+    27→export interface QueryFailure {
+    28→  ok: false;
+    29→  error: {
+    30→    kind:
+    31→      | "UNSAFE_QUERY"
+    32→      | "EMPTY_QUERY"
+    33→      | "SYNTAX_ERROR"
+    34→      | "NO_SUCH_TABLE"
+    35→      | "NO_SUCH_COLUMN"
+    36→      | "UNSUPPORTED"
+    37→      | "TIMEOUT"
+    38→      | "UNKNOWN_ERROR";
+    39→    title: string;
+    40→    message: string;
+    41→    hint?: string;
+    42→  };
+    43→  executionTimeMs: number;
+    44→}
+    45→
+    46→export type QueryResult = QuerySuccess | QueryFailure;
+    47→
+    48→// Default allowed tables for Case 1 (backward compatibility).
+    49→const DEFAULT_ALLOWED_TABLES = new Set([
+    50→  "suspects",
+    51→  "employees",
+    52→  "locations",
+    53→  "visits",
+    54→  "calls",
+    55→  "transactions",
+    56→  "messages",
+    57→  "security_logs",
+    58→]);
+    59→
+    60→/** Get the set of allowed tables for a story (from its schema definition). */
+    61→function getAllowedTables(storyId: string): Set<string> {
+    62→  const story = STORY_REGISTRY.getStory(storyId);
+    63→  if (!story || !story.database.schema) return DEFAULT_ALLOWED_TABLES;
+    64→  return new Set(story.database.schema.map((t) => t.name));
+    65→}
+    66→
+    67→// ---------- sql.js module loading ----------
+    68→
+    69→let _sqlModulePromise: ReturnType<typeof initSqlJs> | null = null;
+    70→
+    71→async function getSqlModule() {
+    72→  if (_sqlModulePromise) return _sqlModulePromise;
+    73→  // Resolve relative to the current document location so it works
+    74→  // from root hosting AND subdirectory hosting.
+    75→  const wasmUrl = new URL('sql-wasm.wasm', document.baseURI).href;
+    76→  _sqlModulePromise = initSqlJs({
+    77→    locateFile: () => wasmUrl,
+    78→  });
+    79→  return _sqlModulePromise;
+    80→}
+    81→
+    82→// ---------- Story database cache ----------
+    83→
+    84→const _dbCache = new Map<string, Database>();
+    85→
+    86→/**
+    87→ * Create (or return a cached) in-memory SQLite database for a story.
+    88→ */
+    89→async function getStoryDatabase(storyId: string): Promise<Database> {
+    90→  const cached = _dbCache.get(storyId);
+    91→  if (cached) return cached;
+    92→
+    93→  const story = STORY_REGISTRY.getStory(storyId);
+    94→  if (!story) {
+    95→    throw new Error(`Story not found: ${storyId}`);
+    96→  }
+    97→
+    98→  const SQL = await getSqlModule();
+    99→  const db = new SQL.Database();
+   100→  // Create the story's schema (each story defines its own tables).
+   101→  if (story.database.schema) {
+   102→    for (const tableDef of story.database.schema) {
+   103→      db.exec(tableDef.createSql);
+   104→    }
+   105→  } else {
+   106→    // Fallback to the shared schema (backward compatibility with Case 1).
+   107→    db.exec(SCHEMA_SQL);
+   108→  }
+   109→  // Seed all tables from the story's data.
+   110→  for (const table of story.database.tables) {
+   111→    seedTable(db, table);
+   112→  }
+   113→
+   114→  _dbCache.set(storyId, db);
+   115→  return db;
+   116→}
+   117→
+   118→/** Destroy a story's cached database. */
+   119→export function releaseStoryDatabase(storyId: string): void {
+   120→  const db = _dbCache.get(storyId);
+   121→  if (db) {
+   122→    try {
+   123→      db.close();
+   124→    } catch {
+   125→      /* ignore */
+   126→    }
+   127→    _dbCache.delete(storyId);
+   128→  }
+   129→}
+   130→
+   131→function seedTable(db: Database, table: SeedTable): void {
+   132→  if (table.rows.length === 0) return;
+   133→  const cols = Object.keys(table.rows[0]);
+   134→  const placeholders = cols.map(() => "?").join(",");
+   135→  const sql = `INSERT INTO ${table.name} (${cols.join(",")}) VALUES (${placeholders})`;
+   136→  const stmt = db.prepare(sql);
+   137→  for (const row of table.rows) {
+   138→    stmt.run(cols.map((c) => (row[c] ?? null) as SqlValue));
+   139→    stmt.reset();
+   140→  }
+   141→  stmt.free();
+   142→}
+   143→
+   144→// ---------- Shared schema ----------
+   145→
+   146→const SCHEMA_SQL = `
+   147→CREATE TABLE suspects (
+   148→  suspect_id    TEXT PRIMARY KEY,
+   149→  name          TEXT NOT NULL,
+   150→  role          TEXT NOT NULL,
+   151→  department    TEXT NOT NULL,
+   152→  hire_date     TEXT NOT NULL,
+   153→  status        TEXT NOT NULL,
+   154→  badge_id      TEXT NOT NULL,
+   155→  phone         TEXT NOT NULL,
+   156→  alibi         TEXT NOT NULL,
+   157→  notes         TEXT NOT NULL
+   158→);
+   159→CREATE TABLE employees (
+   160→  employee_id   TEXT PRIMARY KEY,
+   161→  name          TEXT NOT NULL,
+   162→  role          TEXT NOT NULL,
+   163→  department    TEXT NOT NULL,
+   164→  hire_date     TEXT NOT NULL,
+   165→  status        TEXT NOT NULL,
+   166→  badge_id      TEXT NOT NULL,
+   167→  phone         TEXT NOT NULL,
+   168→  email         TEXT NOT NULL
+   169→);
+   170→CREATE TABLE locations (
+   171→  location_id   TEXT PRIMARY KEY,
+   172→  name          TEXT NOT NULL,
+   173→  floor         TEXT NOT NULL,
+   174→  description   TEXT NOT NULL,
+   175→  access_level  TEXT NOT NULL,
+   176→  has_camera    INTEGER NOT NULL,
+   177→  camera_id     TEXT
+   178→);
+   179→CREATE TABLE visits (
+   180→  visit_id      TEXT PRIMARY KEY,
+   181→  person_id     TEXT NOT NULL,
+   182→  person_name   TEXT NOT NULL,
+   183→  location_id   TEXT NOT NULL,
+   184→  location_name TEXT NOT NULL,
+   185→  entry_time    TEXT NOT NULL,
+   186→  exit_time     TEXT,
+   187→  access_method TEXT NOT NULL,
+   188→  badge_id      TEXT
+   189→);
+   190→CREATE TABLE calls (
+   191→  call_id       TEXT PRIMARY KEY,
+   192→  caller_id     TEXT NOT NULL,
+   193→  caller_name   TEXT NOT NULL,
+   194→  receiver_id   TEXT NOT NULL,
+   195→  receiver_name TEXT NOT NULL,
+   196→  call_time     TEXT NOT NULL,
+   197→  duration_sec  INTEGER NOT NULL,
+   198→  status        TEXT NOT NULL,
+   199→  carrier       TEXT NOT NULL
+   200→);
+   201→CREATE TABLE transactions (
+   202→  transaction_id   TEXT PRIMARY KEY,
+   203→  account_holder   TEXT NOT NULL,
+   204→  person_id        TEXT NOT NULL,
+   205→  amount           REAL NOT NULL,
+   206→  currency         TEXT NOT NULL,
+   207→  direction        TEXT NOT NULL,
+   208→  counterparty     TEXT NOT NULL,
+   209→  transaction_time TEXT NOT NULL,
+   210→  description      TEXT NOT NULL,
+   211→  reference        TEXT,
+   212→  suspicious       INTEGER NOT NULL
+   213→);
+   214→CREATE TABLE messages (
+   215→  message_id    TEXT PRIMARY KEY,
+   216→  sender_id     TEXT NOT NULL,
+   217→  sender_name   TEXT NOT NULL,
+   218→  receiver_id   TEXT NOT NULL,
+   219→  receiver_name TEXT NOT NULL,
+   220→  sent_time     TEXT NOT NULL,
+   221→  content       TEXT NOT NULL,
+   222→  message_type  TEXT NOT NULL,
+   223→  read_status   TEXT NOT NULL
+   224→);
+   225→CREATE TABLE security_logs (
+   226→  log_id        TEXT PRIMARY KEY,
+   227→  timestamp     TEXT NOT NULL,
+   228→  event_type    TEXT NOT NULL,
+   229→  location_id   TEXT NOT NULL,
+   230→  location_name TEXT NOT NULL,
+   231→  person_id     TEXT NOT NULL,
+   232→  actor_name    TEXT NOT NULL,
+   233→  details       TEXT NOT NULL,
+   234→  severity      TEXT NOT NULL
+   235→);
+   236→CREATE TABLE evidence (
+   237→  evidence_id   TEXT PRIMARY KEY,
+   238→  name          TEXT NOT NULL,
+   239→  description   TEXT NOT NULL,
+   240→  location_found TEXT NOT NULL,
+   241→  found_time    TEXT NOT NULL,
+   242→  category      TEXT NOT NULL,
+   243→  significance   TEXT NOT NULL,
+   244→  related_suspect TEXT,
+   245→  related_person_id TEXT
+   246→);
+   247→`;
+   248→
+   249→// ---------- Validation ----------
+   250→
+   251→function stripComments(sql: string): string {
+   252→  let out = "";
+   253→  let i = 0;
+   254→  const n = sql.length;
+   255→  while (i < n) {
+   256→    const c = sql[i];
+   257→    const next = sql[i + 1];
+   258→    if (c === "-" && next === "-") {
+   259→      while (i < n && sql[i] !== "\n") i++;
+   260→      continue;
+   261→    }
+   262→    if (c === "/" && next === "*") {
+   263→      i += 2;
+   264→      while (i < n && !(sql[i] === "*" && sql[i + 1] === "/")) i++;
+   265→      i += 2;
+   266→      continue;
+   267→    }
+   268→    if (c === "'") {
+   269→      out += c;
+   270→      i++;
+   271→      while (i < n) {
+   272→        out += sql[i];
+   273→        if (sql[i] === "'") {
+   274→          if (sql[i + 1] === "'") {
+   275→            out += sql[i + 1];
+   276→            i += 2;
+   277→            continue;
+   278→          }
+   279→          i++;
+   280→          break;
+   281→        }
+   282→        i++;
+   283→      }
+   284→      continue;
+   285→    }
+   286→    if (c === '"') {
+   287→      out += c;
+   288→      i++;
+   289→      while (i < n) {
+   290→        out += sql[i];
+   291→        if (sql[i] === '"') {
+   292→          if (sql[i + 1] === '"') {
+   293→            out += sql[i + 1];
+   294→            i += 2;
+   295→            continue;
+   296→          }
+   297→          i++;
+   298→          break;
+   299→        }
+   300→        i++;
+   301→      }
+   302→      continue;
+   303→    }
+   304→    out += c;
+   305→    i++;
+   306→  }
+   307→  return out;
+   308→}
+   309→
+   310→function splitStatements(sql: string): string[] {
+   311→  const stmts: string[] = [];
+   312→  let buf = "";
+   313→  let i = 0;
+   314→  const n = sql.length;
+   315→  while (i < n) {
+   316→    const c = sql[i];
+   317→    if (c === "'") {
+   318→      buf += c;
+   319→      i++;
+   320→      while (i < n) {
+   321→        buf += sql[i];
+   322→        if (sql[i] === "'") {
+   323→          if (sql[i + 1] === "'") {
+   324→            buf += sql[i + 1];
+   325→            i += 2;
+   326→            continue;
+   327→          }
+   328→          i++;
+   329→          break;
+   330→        }
+   331→        i++;
+   332→      }
+   333→      continue;
+   334→    }
+   335→    if (c === '"') {
+   336→      buf += c;
+   337→      i++;
+   338→      while (i < n) {
+   339→        buf += sql[i];
+   340→        if (sql[i] === '"') {
+   341→          if (sql[i + 1] === '"') {
+   342→            buf += sql[i + 1];
+   343→            i += 2;
+   344→            continue;
+   345→          }
+   346→          i++;
+   347→          break;
+   348→        }
+   349→        i++;
+   350→      }
+   351→      continue;
+   352→    }
+   353→    if (c === ";") {
+   354→      const s = buf.trim();
+   355→      if (s) stmts.push(s);
+   356→      buf = "";
+   357→      i++;
+   358→      continue;
+   359→    }
+   360→    buf += c;
+   361→    i++;
+   362→  }
+   363→  const last = buf.trim();
+   364→  if (last) stmts.push(last);
+   365→  return stmts;
+   366→}
+   367→
+   368→const BLOCKED_KEYWORDS = [
+   369→  "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "ATTACH", "DETACH",
+   370→  "REPLACE", "REINDEX", "VACUUM", "ANALYZE", "PRAGMA", "BEGIN", "COMMIT",
+   371→  "ROLLBACK", "SAVEPOINT", "RELEASE", "LOAD", "IMPORT", "EXPORT", "EXPLAIN",
+   372→  "INTO", "VALUES",
+   373→];
+   374→
+   375→function findBlockedKeyword(tokenised: string[]): string | null {
+   376→  for (const kw of BLOCKED_KEYWORDS) {
+   377→    if (tokenised.includes(kw)) return kw;
+   378→  }
+   379→  return null;
+   380→}
+   381→
+   382→function tokenise(stmt: string): string[] {
+   383→  return stmt.toUpperCase().match(/[A-Z_]+/g) ?? [];
+   384→}
+   385→
+   386→function referencedTables(stmt: string): string[] {
+   387→  const tables: string[] = [];
+   388→  const upper = stmt.toUpperCase();
+   389→  const re = /(?:FROM|JOIN|INTO|UPDATE|TABLE)\s+([A-Za-z_][A-Za-z0-9_]*)/g;
+   390→  let m: RegExpExecArray | null;
+   391→  while ((m = re.exec(upper)) !== null) {
+   392→    tables.push(m[1].toLowerCase());
+   393→  }
+   394→  return tables;
+   395→}
+   396→
+   397→export interface ValidationResult {
+   398→  valid: boolean;
+   399→  statement: string;
+   400→  error?: QueryFailure["error"];
+   401→}
+   402→
+   403→export function validateQuery(rawSql: string, allowedTables?: Set<string>): ValidationResult {
+   404→  const cleaned = stripComments(rawSql ?? "").trim();
+   405→  if (!cleaned) {
+   406→    return {
+   407→      valid: false,
+   408→      statement: "",
+   409→      error: {
+   410→        kind: "EMPTY_QUERY",
+   411→        title: "EMPTY QUERY",
+   412→        message: "The query editor is empty. Write a SELECT statement and run it again.",
+   413→        hint: "Tip: try SELECT * FROM suspects;",
+   414→      },
+   415→    };
+   416→  }
+   417→
+   418→  const statements = splitStatements(cleaned);
+   419→  if (statements.length === 0) {
+   420→    return {
+   421→      valid: false,
+   422→      statement: "",
+   423→      error: {
+   424→        kind: "EMPTY_QUERY",
+   425→        title: "EMPTY QUERY",
+   426→        message: "The query editor is empty. Write a SELECT statement and run it again.",
+   427→      },
+   428→    };
+   429→  }
+   430→  if (statements.length > 1) {
+   431→    return {
+   432→      valid: false,
+   433→      statement: statements[0],
+   434→      error: {
+   435→        kind: "UNSUPPORTED",
+   436→        title: "MULTIPLE STATEMENTS",
+   437→        message: "Only a single read-only investigation query is permitted per execution.",
+   438→        hint: "Run one SELECT statement at a time.",
+   439→      },
+   440→    };
+   441→  }
+   442→
+   443→  const stmt = statements[0];
+   444→  const upper = stmt.toUpperCase();
+   445→  if (!/^(SELECT|WITH)\b/.test(upper)) {
+   446→    return {
+   447→      valid: false,
+   448→      statement: stmt,
+   449→      error: {
+   450→        kind: "UNSAFE_QUERY",
+   451→        title: "UNSAFE QUERY",
+   452→        message: "Only read-only investigation queries are permitted.",
+   453→        hint: "Queries must begin with SELECT or WITH.",
+   454→      },
+   455→    };
+   456→  }
+   457→
+   458→  const tokens = tokenise(stmt);
+   459→  const blocked = findBlockedKeyword(tokens);
+   460→  if (blocked) {
+   461→    return {
+   462→      valid: false,
+   463→      statement: stmt,
+   464→      error: {
+   465→        kind: "UNSAFE_QUERY",
+   466→        title: "UNSAFE QUERY",
+   467→        message: `Only read-only investigation queries are permitted. The keyword "${blocked}" is not allowed.`,
+   468→        hint: "Use SELECT to read from the investigation tables.",
+   469→      },
+   470→    };
+   471→  }
+   472→
+   473→  const tables = referencedTables(stmt);
+   474→  for (const t of tables) {
+   475→    if (!(allowedTables ?? DEFAULT_ALLOWED_TABLES).has(t)) {
+   476→      return {
+   477→        valid: false,
+   478→        statement: stmt,
+   479→        error: {
+   480→          kind: "NO_SUCH_TABLE",
+   481→          title: "QUERY ERROR",
+   482→          message: `Table "${t}" does not exist.`,
+   483→          hint: "Check the Database Explorer to see the available tables.",
+   484→        },
+   485→      };
+   486→    }
+   487→  }
+   488→
+   489→  return { valid: true, statement: stmt };
+   490→}
+   491→
+   492→function classifyError(err: unknown): QueryFailure["error"] {
+   493→  const msg = err instanceof Error ? err.message : String(err);
+   494→  let m = msg.match(/no such table: (\S+)/i);
+   495→  if (m) {
+   496→    return {
+   497→      kind: "NO_SUCH_TABLE",
+   498→      title: "QUERY ERROR",
+   499→      message: `Table "${m[1]}" does not exist.`,
+   500→      hint: "Check the Database Explorer to see the available tables.",
+   501→    };
+   502→  }
+   503→  m = msg.match(/no such column: (\S+)/i);
+   504→  if (m) {
+   505→    return {
+   506→      kind: "NO_SUCH_COLUMN",
+   507→      title: "QUERY ERROR",
+   508→      message: `Column "${m[1]}" does not exist.`,
+   509→      hint: "Check the Database Explorer to see the available columns for each table.",
+   510→    };
+   511→  }
+   512→  if (/syntax error/i.test(msg) || /near ".*?": syntax error/i.test(msg)) {
+   513→    return {
+   514→      kind: "SYNTAX_ERROR",
+   515→      title: "QUERY ERROR",
+   516→      message: "The query contains a syntax error.",
+   517→      hint: "Check for missing commas, parentheses, or mismatched quotes. SQLite uses standard SQL syntax.",
+   518→    };
+   519→  }
+   520→  if (/ambiguous column name: (\S+)/i.test(msg)) {
+   521→    m = msg.match(/ambiguous column name: (\S+)/i);
+   522→    return {
+   523→      kind: "SYNTAX_ERROR",
+   524→      title: "QUERY ERROR",
+   525→      message: `Column "${m?.[1]}" is ambiguous — it exists in more than one table.`,
+   526→      hint: "Qualify the column with its table name, e.g. suspects.name",
+   527→    };
+   528→  }
+   529→  if (/no such function: (\S+)/i.test(msg)) {
+   530→    m = msg.match(/no such function: (\S+)/i);
+   531→    return {
+   532→      kind: "SYNTAX_ERROR",
+   533→      title: "QUERY ERROR",
+   534→      message: `Function "${m?.[1]}" does not exist.`,
+   535→      hint: "Only built-in SQLite functions are available.",
+   536→    };
+   537→  }
+   538→  return {
+   539→    kind: "UNKNOWN_ERROR",
+   540→    title: "QUERY ERROR",
+   541→    message: msg || "An unknown error occurred while executing the query.",
+   542→    hint: "Review your query against the Database Explorer schema.",
+   543→  };
+   544→}
+   545→
+   546→const MAX_ROWS = 1000;
+   547→
+   548→export async function executeQuery(storyId: string, rawSql: string): Promise<QueryResult> {
+   549→  const start = performance.now();
+   550→  const validation = validateQuery(rawSql, getAllowedTables(storyId));
+   551→  if (!validation.valid) {
+   552→    return {
+   553→      ok: false,
+   554→      error: validation.error!,
+   555→      executionTimeMs: Math.round(performance.now() - start),
+   556→    };
+   557→  }
+   558→  const stmt = validation.statement;
+   559→  try {
+   560→    const db = await getStoryDatabase(storyId);
+   561→    let execResult: { columns: string[]; values: SqlValue[][] }[] = [];
+   562→    try {
+   563→      execResult = db.exec(stmt);
+   564→    } catch (err) {
+   565→      return {
+   566→        ok: false,
+   567→        error: classifyError(err),
+   568→        executionTimeMs: Math.round(performance.now() - start),
+   569→      };
+   570→    }
+   571→    let columns: string[] = [];
+   572→    let rows: QueryRow[] = [];
+   573→    let rowCount = 0;
+   574→    if (execResult.length > 0) {
+   575→      const r = execResult[0];
+   576→      columns = r.columns;
+   577→      rowCount = r.values.length;
+   578→      const limited = r.values.length > MAX_ROWS ? r.values.slice(0, MAX_ROWS) : r.values;
+   579→      rows = limited.map((rowVals) => {
+   580→        const obj: QueryRow = {};
+   581→        columns.forEach((c, idx) => {
+   582→          obj[c] = rowVals[idx];
+   583→        });
+   584→        return obj;
+   585→      });
+   586→    } else {
+   587→      columns = inferColumns(db, stmt);
+   588→      rowCount = 0;
+   589→      rows = [];
+   590→    }
+   591→    const truncated = rowCount > MAX_ROWS;
+   592→    return {
+   593→      ok: true,
+   594→      columns,
+   595→      rows,
+   596→      rowCount,
+   597→      executionTimeMs: Math.round(performance.now() - start),
+   598→      truncated,
+   599→    };
+   600→  } catch (err) {
+   601→    return {
+   602→      ok: false,
+   603→      error: classifyError(err),
+   604→      executionTimeMs: Math.round(performance.now() - start),
+   605→    };
+   606→  }
+   607→}
+   608→
+   609→function inferColumns(db: Database, stmt: string): string[] {
+   610→  try {
+   611→    const inner = stmt.replace(/;\s*$/, "");
+   612→    const wrapped = `SELECT * FROM (${inner}) AS _q WHERE 1=0`;
+   613→    const res = db.exec(wrapped);
+   614→    if (res.length > 0) return res[0].columns;
+   615→    return [];
+   616→  } catch {
+   617→    return [];
+   618→  }
+   619→}
+   620→
+   621→// ---------- Schema metadata ----------
+   622→
+   623→export interface ColumnInfo {
+   624→  name: string;
+   625→  type: string;
+   626→  notnull: number;
+   627→  pk: number;
+   628→  description: string;
+   629→}
+   630→
+   631→export interface TableInfo {
+   632→  name: string;
+   633→  description: string;
+   634→  columns: ColumnInfo[];
+   635→}
+   636→
+   637→const TABLE_DESCRIPTIONS: Record<string, string> = {
+   638→  suspects: "The persons of interest in the investigation.",
+   639→  employees: "All staff, including non-suspects and the victim.",
+   640→  locations: "Physical locations inside the facility, with camera coverage.",
+   641→  visits: "Badge access / movement records showing who entered which location and when.",
+   642→  calls: "Phone call records — internal PBX and external carriers.",
+   643→  transactions: "Financial transactions across employee accounts. Flagged when suspicious.",
+   644→  messages: "Internal email, SMS, and instant messages exchanged between parties.",
+   645→  security_logs: "Security system events: camera status, door access, logins, alarms.",
+   646→  evidence: "Catalogue of physical, digital, financial, and forensic evidence.",
+   647→};
+   648→
+   649→const COLUMN_DESCRIPTIONS: Record<string, Record<string, string>> = {
+   650→  suspects: {
+   651→    suspect_id: "Primary key — unique identifier for each suspect.",
+   652→    name: "Full name of the suspect.",
+   653→    role: "Job title.",
+   654→    department: "Department the suspect belongs to.",
+   655→    hire_date: "Date the suspect joined (ISO date).",
+   656→    status: "Investigation status.",
+   657→    badge_id: "Physical access badge identifier.",
+   658→    phone: "Contact phone number.",
+   659→    alibi: "Stated alibi for the night of the incident.",
+   660→    notes: "Investigator's notes about the suspect.",
+   661→  },
+   662→  employees: {
+   663→    employee_id: "Primary key — unique employee identifier.",
+   664→    name: "Full name.",
+   665→    role: "Job title.",
+   666→    department: "Department.",
+   667→    hire_date: "Hire date (ISO).",
+   668→    status: "Employment status (Active, Deceased, On Leave).",
+   669→    badge_id: "Access badge identifier.",
+   670→    phone: "Contact phone.",
+   671→    email: "Internal email address.",
+   672→  },
+   673→  locations: {
+   674→    location_id: "Primary key — unique location identifier.",
+   675→    name: "Location name.",
+   676→    floor: "Building floor (1, B2, R for rooftop, etc.).",
+   677→    description: "Description of the location.",
+   678→    access_level: "Required access level (PUBLIC, STAFF, RESTRICTED, SECURITY, EXECUTIVE).",
+   679→    has_camera: "1 if the location has a security camera, 0 otherwise.",
+   680→    camera_id: "Identifier of the covering camera (if any).",
+   681→  },
+   682→  visits: {
+   683→    visit_id: "Primary key — unique visit record.",
+   684→    person_id: "Identifier of the person (maps to employees.employee_id).",
+   685→    person_name: "Name of the person.",
+   686→    location_id: "Location visited (maps to locations.location_id).",
+   687→    location_name: "Name of the location.",
+   688→    entry_time: "Timestamp the person entered.",
+   689→    exit_time: "Timestamp the person exited (NULL if still inside / never logged out).",
+   690→    access_method: "How access was granted (BADGE, MANUAL).",
+   691→    badge_id: "Badge used for the access event.",
+   692→  },
+   693→  calls: {
+   694→    call_id: "Primary key — unique call record.",
+   695→    caller_id: "Identifier of the caller.",
+   696→    caller_name: "Name of the caller.",
+   697→    receiver_id: "Identifier of the receiver.",
+   698→    receiver_name: "Name of the receiver.",
+   699→    call_time: "Timestamp the call was placed.",
+   700→    duration_sec: "Call duration in seconds.",
+   701→    status: "Call status (CONNECTED, MISSED).",
+   702→    carrier: "Telecom carrier that routed the call.",
+   703→  },
+   704→  transactions: {
+   705→    transaction_id: "Primary key — unique transaction reference (e.g. TXN-10001).",
+   706→    account_holder: "Name of the account holder.",
+   707→    person_id: "Employee associated with the account (maps to employees.employee_id).",
+   708→    amount: "Transaction amount.",
+   709→    currency: "ISO currency code.",
+   710→    direction: "INCOMING or OUTGOING.",
+   711→    counterparty: "Name of the other party in the transaction.",
+   712→    transaction_time: "Timestamp the transaction posted.",
+   713→    description: "Bank memo / description.",
+   714→    reference: "Optional project / reference code tagging the transaction. NULL when untagged.",
+   715→    suspicious: "1 if flagged as suspicious by the audit, 0 otherwise.",
+   716→  },
+   717→  messages: {
+   718→    message_id: "Primary key — unique message identifier.",
+   719→    sender_id: "Identifier of the sender.",
+   720→    sender_name: "Name of the sender.",
+   721→    receiver_id: "Identifier of the receiver.",
+   722→    receiver_name: "Name of the receiver.",
+   723→    sent_time: "Timestamp the message was sent.",
+   724→    content: "Full message body.",
+   725→    message_type: "Channel (EMAIL, SMS, INTERNAL).",
+   726→    read_status: "Read state (READ, UNREAD).",
+   727→  },
+   728→  security_logs: {
+   729→    log_id: "Primary key — unique log entry.",
+   730→    timestamp: "When the event occurred.",
+   731→    event_type: "Type of security event (CAMERA_DISABLED, DOOR_ACCESS, TERMINAL_WIPE, ALARM_TRIGGERED, etc.).",
+   732→    location_id: "Location the event relates to.",
+   733→    location_name: "Name of the location.",
+   734→    person_id: "Identifier of the person who triggered the event (SYSTEM for automated).",
+   735→    actor_name: "Name of the actor.",
+   736→    details: "Human-readable event details.",
+   737→    severity: "Event severity (INFO, WARNING, CRITICAL).",
+   738→  },
+   739→  evidence: {
+   740→    evidence_id: "Primary key — unique evidence identifier (e.g. EVD-001).",
+   741→    name: "Short name of the evidence item.",
+   742→    description: "Detailed description of the evidence.",
+   743→    location_found: "Where the evidence was found / recovered.",
+   744→    found_time: "Timestamp associated with the evidence.",
+   745→    category: "Evidence category (PHYSICAL, DIGITAL, FINANCIAL, FORENSIC).",
+   746→    significance: "Why this evidence matters to the investigation.",
+   747→    related_suspect: "Suspect id this evidence implicates (if any).",
+   748→    related_person_id: "Person id this evidence relates to.",
+   749→  },
+   750→};
+   751→
+   752→export async function getSchema(storyId: string): Promise<TableInfo[]> {
+   753→  const db = await getStoryDatabase(storyId);
+   754→  const story = STORY_REGISTRY.getStory(storyId);
+   755→  // If the story defines its own schema, use it; otherwise fall back to Case 1 tables.
+   756→  const tableNames = story?.database.schema?.map((s) => s.name) ?? ["suspects", "employees", "locations", "visits", "calls", "transactions", "messages", "security_logs"];
+   757→  return tableNames.map((t) => {
+   758→    const res = db.exec(`PRAGMA table_info(${t})`);
+   759→    const colsRaw: { name: string; type: string; notnull: number; pk: number }[] =
+   760→      res.length > 0
+   761→        ? res[0].values.map((v) => ({
+   762→            name: String(v[1]),
+   763→            type: String(v[2] || "TEXT"),
+   764→            notnull: Number(v[3]),
+   765→            pk: Number(v[5]),
+   766→          }))
+   767→        : [];
+   768→    // Use story-provided descriptions if available, otherwise fall back to defaults.
+   769→    const storyTableDef = story?.database.schema?.find((s) => s.name === t);
+   770→    const description = storyTableDef?.description ?? TABLE_DESCRIPTIONS[t] ?? "";
+   771→    return {
+   772→      name: t,
+   773→      description,
+   774→      columns: colsRaw.map((c) => {
+   775→        const storyColDef = storyTableDef?.columns.find((sc) => sc.name === c.name);
+   776→        return {
+   777→          name: c.name,
+   778→          type: c.type || "TEXT",
+   779→          notnull: c.notnull,
+   780→          pk: c.pk,
+   781→          description: storyColDef?.description ?? COLUMN_DESCRIPTIONS[t]?.[c.name] ?? "",
+   782→        };
+   783→      }),
+   784→    };
+   785→  });
+   786→}
+   787→
+   788→// ---------- Client-side accusation evaluation ----------
+   789→
+   790→export interface AccusationResult {
+   791→  correct: boolean;
+   792→  correctCount: number;
+   793→  who: { correct: boolean; answer: string; correctAnswer: string };
+   794→  how: { correct: boolean; answer: string; correctAnswer: string };
+   795→  why: { correct: boolean; answer: string; correctAnswer: string };
+   796→}
+   797→
+   798→export function evaluateAccusation(
+   799→  storyId: string,
+   800→  who: string,
+   801→  how: string,
+   802→  why: string,
+   803→): AccusationResult {
+   804→  const story = STORY_REGISTRY.getStory(storyId);
+   805→  if (!story) {
+   806→    return {
+   807→      correct: false,
+   808→      correctCount: 0,
+   809→      who: { correct: false, answer: who, correctAnswer: "" },
+   810→      how: { correct: false, answer: how, correctAnswer: "" },
+   811→      why: { correct: false, answer: why, correctAnswer: "" },
+   812→    };
+   813→  }
+   814→  const CORRECT = story.solution;
+   815→  const whoCorrect = who === CORRECT.who;
+   816→  const howCorrect = how === CORRECT.how;
+   817→  const whyCorrect = why === CORRECT.why;
+   818→  return {
+   819→    correct: whoCorrect && howCorrect && whyCorrect,
+   820→    correctCount: [whoCorrect, howCorrect, whyCorrect].filter(Boolean).length,
+   821→    who: { correct: whoCorrect, answer: who, correctAnswer: CORRECT.who },
+   822→    how: { correct: howCorrect, answer: how, correctAnswer: CORRECT.how },
+   823→    why: { correct: whyCorrect, answer: why, correctAnswer: CORRECT.why },
+   824→  };
+   825→}
+   826→

@@ -1,6 +1,5 @@
 import type { EvidenceTrigger, EvidenceTriggerContext } from "@/stories/types";
 
-// Content-based trigger helpers
 function rowHas(row: Record<string, unknown>, field: string, value: string): boolean {
   return String(row[field] ?? "").toLowerCase() === value.toLowerCase();
 }
@@ -11,168 +10,130 @@ function anyRow(pred: (row: Record<string, unknown>) => boolean, rows: Record<st
 export const CASE_001_EVIDENCE_TRIGGERS: EvidenceTrigger[] = [
   {
     evidenceId: "EVD-001",
-    name: "Reference TR-4817 in Audit Notes",
-    description: "A handwritten reference 'TR-4817' found in Elias Voss's personal audit notebook near the Archive terminal.",
-    category: "PHYSICAL",
-    significance: "The starting clue. TR-4817 is a reference code that recurs across many small transactions and several messages.",
+    name: "Seven-Minute Telemetry Gap",
+    description: "KOSMOS-9147's telemetry record shows a gap between 02:13 and 02:21 UTC.",
+    category: "SECURITY",
+    significance: "Proves the satellite was tampered with during a specific window.",
     test: (c) =>
-      /tr-4817/i.test(c.sqlUpper) &&
-      (c.tableName === "transactions" || c.tableName === "messages" || c.tableName === "security_logs"),
+      c.tableName === "satellite_events" &&
+      /02:1[3-9]|02:2[0-1]|between/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
   {
     evidenceId: "EVD-002",
-    name: "Disabled Camera Feed",
-    description: "Archive camera CAM-04 manually disabled at 22:30:12 by admin user d.brooks from the Security Control Room.",
+    name: "RUS-77A Authentication",
+    description: "Access ID RUS-77A successfully authenticated with KOSMOS-9147 during the incident.",
     category: "SECURITY",
-    significance: "Establishes premeditation and an accomplice. Disabled remotely, not from inside the Archive.",
+    significance: "Identifies the credential used in the breach.",
     test: (c) =>
-      anyRow((r) => String(r.event_type ?? "").toUpperCase() === "CAMERA_DISABLED", c.rows) ||
-      (/camera_disabled/i.test(c.sqlUpper) && c.rowCount > 0) ||
-      anyRow((r) => /cam-04.*disabled/i.test(String(r.details ?? "")) || /disabled.*cam-04/i.test(String(r.details ?? "")), c.rows),
+      (c.tableName === "access_logs" && /rus-77a/i.test(c.sqlUpper) && c.rowCount > 0) ||
+      anyRow((r) => String(r.access_id ?? "").toUpperCase() === "RUS-77A", c.rows),
   },
   {
     evidenceId: "EVD-003",
-    name: "Maya's Archive Access",
-    description: "Badge MC-4471 (Maya Chen) entered the Archive at 22:41:09 and exited at 22:54:07 — during the estimated time of death.",
-    category: "MOVEMENT",
-    significance: "Places Maya at the scene during the time of death and contradicts her alibi.",
-    test: (c) => {
-      const mayaArchive = anyRow(
-        (r) => rowHas(r, "person_name", "Maya Chen") && (rowHas(r, "location_name", "Archive") || rowHas(r, "location_id", "LOC-04")),
-        c.rows,
-      );
-      const mayaArchiveLog = anyRow(
-        (r) => /maya/i.test(String(r.actor_name ?? "")) && /archive/i.test(String(r.location_name ?? "")),
-        c.rows,
-      );
-      const sqlTargetsMayaArchive =
-        c.tableName === "visits" && /maya/i.test(c.sqlUpper) && /archive|loc-04/i.test(c.sqlUpper);
-      return mayaArchive || mayaArchiveLog || sqlTargetsMayaArchive;
-    },
+    name: "Sokolov's Credential Ownership",
+    description: "Credential RUS-77A officially belongs to Colonel Viktor Sokolov (AGT-001).",
+    category: "SECURITY",
+    significance: "Links the access ID to Sokolov.",
+    test: (c) =>
+      c.tableName === "credentials" &&
+      /rus-77a/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
   {
     evidenceId: "EVD-004",
-    name: "Maya's Return to the Building",
-    description: "Badge MC-4471 re-entered via the Side Entrance at 22:18:22 — after exiting the Parking Garage at 21:00.",
+    name: "Sokolov's Location Contradiction",
+    description: "Sokolov was at a different location during the incident — someone else used his credential.",
     category: "MOVEMENT",
-    significance: "Direct contradiction of Maya's alibi. She returned secretly via the unguarded side entrance.",
+    significance: "Proves Sokolov did not personally use RUS-77A.",
     test: (c) =>
-      anyRow(
-        (r) => rowHas(r, "person_name", "Maya Chen") && (rowHas(r, "location_name", "Side Entrance") || rowHas(r, "location_id", "LOC-11")),
-        c.rows,
-      ) ||
-      anyRow(
-        (r) => /maya/i.test(String(r.actor_name ?? "")) && /side entrance/i.test(String(r.location_name ?? "")),
-        c.rows,
-      ),
+      c.tableName === "agent_movements" &&
+      /agt-001|sokolov/i.test(c.sqlUpper) &&
+      c.rowCount >= 2,
   },
   {
     evidenceId: "EVD-005",
-    name: "Wiped Archive Terminal",
-    description: "Archive workstation ARC-TERM-02 wiped at 22:50:41, authenticated as m.chen from the local console.",
-    category: "SECURITY",
-    significance: "Maya was inside the Archive at the time. Indicates an attempt to destroy evidence of the motive.",
-    test: (c) =>
-      anyRow((r) => String(r.event_type ?? "").toUpperCase() === "TERMINAL_WIPE", c.rows) ||
-      (/terminal_wipe/i.test(c.sqlUpper) && c.rowCount > 0),
+    name: "Anya-Dmitri Communication Pattern",
+    description: "Anya Petrova and Dmitri Volkov communicated 8 times before the incident.",
+    category: "COMMUNICATION",
+    significance: "Establishes coordination between two suspects.",
+    test: (c) => {
+      if (c.tableName !== "communications") return false;
+      const anyaDmitri = anyRow(
+        (r) =>
+          (rowHas(r, "sender_id", "AGT-003") && rowHas(r, "receiver_id", "AGT-004")) ||
+          (rowHas(r, "sender_id", "AGT-004") && rowHas(r, "receiver_id", "AGT-003")),
+        c.rows,
+      );
+      const hasGroupBy = /group\s+by/i.test(c.sqlUpper);
+      const showsPairAggregation = hasGroupBy && c.rowCount >= 1;
+      return anyaDmitri || showsPairAggregation;
+    },
   },
   {
     evidenceId: "EVD-006",
-    name: "TR-4817 Financial Pattern",
-    description: "14 transactions tagged reference TR-4817: small outgoing vendor payments + incoming kickbacks to Maya Chen's account, all authorised by the same signatory.",
+    name: "TR-914 Financial Pattern",
+    description: "Anya Petrova received 5 payments tagged TR-914.",
     category: "FINANCIAL",
-    significance: "Provides motive: embezzlement. Only visible when transactions are aggregated by reference code.",
-    test: (c) => {
-      const queriedTR4817 = /tr-4817/i.test(c.sqlUpper) && c.tableName === "transactions";
-      const hasMultipleTR4817Rows = queriedTR4817 && c.rowCount >= 3;
-      const hasGroupBy = /group\s+by/i.test(c.sqlUpper);
-      const showsMayaAggregation =
-        hasGroupBy &&
-        c.tableName === "transactions" &&
-        anyRow((r) => /maya/i.test(String(r.account_holder ?? "")), c.rows) &&
-        (c.columns.includes("count") || c.columns.includes("total") || c.columns.some((col) => /count|sum|total/i.test(col)));
-      return hasMultipleTR4817Rows || showsMayaAggregation;
-    },
+    significance: "Provides motive: payment for the satellite operation.",
+    test: (c) =>
+      c.tableName === "financial_records" &&
+      /tr-914/i.test(c.sqlUpper) &&
+      c.rowCount >= 3,
   },
   {
     evidenceId: "EVD-007",
-    name: "Elias's Confrontation Invitation",
-    description: "Email chain Elias↔Maya at 20:45–20:49. Elias requests a private meeting at the Archive at 22:30.",
-    category: "MESSAGE",
-    significance: "Establishes Elias arranged the meeting and already had the evidence — Maya was being confronted.",
+    name: "TR-914 Cross-Table References",
+    description: "TR-914 appears in both financial_records and communications message hashes.",
+    category: "COMMUNICATION",
+    significance: "Connects financial payments to communications.",
     test: (c) =>
-      c.tableName === "messages" &&
-      anyRow(
-        (r) =>
-          (rowHas(r, "sender_name", "Elias Voss") && rowHas(r, "receiver_name", "Maya Chen")) ||
-          (rowHas(r, "sender_name", "Maya Chen") && rowHas(r, "receiver_name", "Elias Voss")),
-        c.rows,
-      ),
+      c.tableName === "communications" &&
+      /tr-914/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
   {
     evidenceId: "EVD-008",
-    name: "Maya-Daniel Coordination",
-    description: "SMS chain Maya↔Daniel 21:15–22:09: 'He knows. He pulled the TR-4817 file... I need the room dark.' 'How dark.' 'CAM-04.'",
-    category: "COMMUNICATION",
-    significance: "Establishes Daniel as accomplice (camera) and Maya as principal (returned, entered Archive).",
-    test: (c) => {
-      const msgCoordination =
-        c.tableName === "messages" &&
-        anyRow(
-          (r) =>
-            (rowHas(r, "sender_name", "Maya Chen") && rowHas(r, "receiver_name", "Daniel Brooks")) ||
-            (rowHas(r, "sender_name", "Daniel Brooks") && rowHas(r, "receiver_name", "Maya Chen")),
-          c.rows,
-        );
-      const callCoordination =
-        c.tableName === "calls" &&
-        anyRow(
-          (r) =>
-            (rowHas(r, "caller_name", "Maya Chen") && rowHas(r, "receiver_name", "Daniel Brooks")) ||
-            (rowHas(r, "caller_name", "Daniel Brooks") && rowHas(r, "receiver_name", "Maya Chen")),
-          c.rows,
-        );
-      return msgCoordination || callCoordination;
-    },
+    name: "Identity Trail Manipulation",
+    description: "RUS-77A was used to claim 4 different identities.",
+    category: "SECURITY",
+    significance: "Proves the identity trail was deliberately manipulated.",
+    test: (c) =>
+      c.tableName === "identity_events" &&
+      (/count.*distinct|group\s+by/i.test(c.sqlUpper)) &&
+      (c.rowCount > 0 || /rus-77a/i.test(c.sqlUpper)),
   },
-  // EVD-010 (Missing Phone) — previously discovered via the evidence table,
-  // which is now hidden from players. This evidence is discovered via the
-  // timeline when the player finds the wiped terminal (EVD-005) instead.
+  {
+    evidenceId: "EVD-009",
+    name: "Anya's Location at Uplink Facility",
+    description: "Anya Petrova was at the Plesetsk Uplink Station during the entire incident window.",
+    category: "MOVEMENT",
+    significance: "Places Anya at the scene of the satellite breach.",
+    test: (c) =>
+      c.tableName === "agent_movements" &&
+      /agt-003|petrova/i.test(c.sqlUpper) &&
+      c.rowCount >= 2,
+  },
   {
     evidenceId: "EVD-010",
-    name: "Missing Phone",
-    description: "Elias Voss's phone unrecovered. Last signal at 22:51 near the Archive.",
-    category: "PHYSICAL",
-    significance: "Likely removed by the killer to suppress communications.",
-    test: (c) =>
-      // Fires when the player finds the terminal wipe — the phone went dark
-      // at almost the same time (22:51 vs 22:50:41).
-      anyRow((r) => String(r.event_type ?? "").toUpperCase() === "TERMINAL_WIPE", c.rows),
-  },
-  {
-    evidenceId: "EVD-012",
-    name: "Building Movement Log",
-    description: "Complete badge access log for 2025-03-14 establishing who was present.",
+    name: "Ethan Hunt's False Trail",
+    description: "Ethan Hunt's movements contradict his mission assignment.",
     category: "MOVEMENT",
-    significance: "The master movement record. Cross-referencing reveals Maya's secret return.",
-    test: (c) => c.tableName === "visits" && c.rowCount >= 8,
+    significance: "Reveals Ethan was deliberately inserted to create a false trail.",
+    test: (c) =>
+      c.tableName === "mission_records" &&
+      /agt-002|ethan/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
 ];
 
-// Helper for the evidence engine.
 export function discoverEvidenceFromResult(
   ctx: EvidenceTriggerContext,
   triggers: EvidenceTrigger[],
   alreadyDiscovered: string[],
 ): EvidenceTrigger[] {
   const already = new Set(alreadyDiscovered);
-  return triggers.filter((t) => !already.has(t.evidenceId)).filter((t) => safeTest(t, ctx));
-}
-
-function safeTest(trigger: EvidenceTrigger, ctx: EvidenceTriggerContext): boolean {
-  try {
-    return trigger.test(ctx);
-  } catch {
-    return false;
-  }
+  return triggers.filter((t) => !already.has(t.evidenceId)).filter((t) => {
+    try { return t.test(ctx); } catch { return false; }
+  });
 }

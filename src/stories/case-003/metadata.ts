@@ -1,20 +1,36 @@
 import type { StoryMetadata } from "@/stories/types";
 
+/**
+ * Project Lazarus — coming soon.
+ *
+ * A scientific conspiracy / biotech thriller. A scientist working on
+ * experimental tissue regeneration dies unexpectedly. The official report
+ * says natural causes. The laboratory's internal database shows something
+ * impossible: the scientist's credentials were used six hours after his
+ * recorded time of death.
+ *
+ * Gameplay will combine SQL investigation (researchers, lab access,
+ * experiment logs, sample inventory, security records) with Python
+ * gameplay (analyzing experimental datasets and .pkl files via pickle).
+ *
+ * Twist: the credentials weren't stolen — someone, or something, was
+ * using them.
+ */
 export const CASE_003_METADATA: StoryMetadata = {
   id: "case-003",
   caseNumber: "#003",
-  slug: "the-1147-train",
-  title: "THE 11:47 TRAIN",
-  tagline: "NOBODY ENTERED. EVERYONE IS A SUSPECT.",
+  slug: "project-lazarus",
+  title: "PROJECT LAZARUS",
+  tagline: "DEATH WAS ONLY THE BEGINNING.",
   description:
-    "Aboard the Maharaja Meridian luxury train, billionaire industrialist Arvind Rao is found dead inside locked cabin A-17 during the four-minute Khandala Tunnel crossing. The door was latched from inside. CCTV shows no entry. No weapon is found. Investigate passengers, reconstruct the tunnel timeline, and discover how a murder can happen without anyone entering the room.",
+    "A scientist working on experimental tissue regeneration dies unexpectedly. The official report says natural causes — but the laboratory's internal database shows his credentials were used six hours after his recorded time of death. Investigate researcher records, lab access logs, experiment datasets, and serialized .pkl objects to uncover the truth. The credentials weren't stolen. Someone — or something — was using them.",
   difficulty: "INSPECTOR",
-  estimatedTime: "75–120 min",
-  accessType: "FREE",
-  victim: "Arvind Rao",
-  victimRole: "Industrialist, Chairman of Rao Meridian Industries",
-  location: "MAHARAJA MERIDIAN — PRIVATE CABIN A-17",
-  incidentDate: "March 16, 2025",
-  timeOfDeath: "11:47 PM — 11:52 PM",
-  discoveredAt: "11:54 PM",
+  estimatedTime: "90–120 min",
+  accessType: "COMING_SOON",
+  victim: "Dr. Aris Thorne",
+  victimRole: "Lead Researcher, Tissue Regeneration, Helix Bio Labs",
+  location: "HELIX BIO LABS — SUBLEVEL RESEARCH WING, LAB 7",
+  incidentDate: "April 22, 2025",
+  timeOfDeath: "06:14 AM (Recorded)",
+  discoveredAt: "12:08 PM (Credential Use Detected)",
 };

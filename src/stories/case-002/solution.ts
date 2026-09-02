@@ -11,55 +11,136 @@ function anyRow(pred: (row: Record<string, unknown>) => boolean, rows: Record<st
 export const CASE_002_OBJECTIVE_TRIGGERS: ObjectiveTrigger[] = [
   {
     objectiveId: "OBJ-1",
-    test: (c) => c.tableName === "satellite_events" && /01:5|02:[0-3]|between/i.test(c.sqlUpper) && c.rowCount > 0,
+    test: (c) =>
+      (c.tableName === "passengers" || c.tableName === "tickets" || c.tableName === "cabin_assignments") &&
+      /coach|cabin/i.test(c.sqlUpper) &&
+      c.rowCount >= 5,
   },
   {
     objectiveId: "OBJ-2",
-    test: (c) => c.tableName === "satellite_events" && /02:1[3-9]|02:2[0-1]|between/i.test(c.sqlUpper) && c.rowCount >= 0,
+    test: (c) =>
+      c.tableName === "dining_transactions" &&
+      /arvind|p006/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
   {
     objectiveId: "OBJ-3",
-    test: (c) => c.tableName === "access_logs" && (/distinct|rus-77a/i.test(c.sqlUpper)) && c.rowCount > 0,
+    test: (c) =>
+      (c.tableName === "station_logs" || c.tableName === "cctv_metadata") &&
+      c.rowCount >= 5,
   },
   {
     objectiveId: "OBJ-4",
-    test: (c) => c.tableName === "credentials" && /rus-77a|join/i.test(c.sqlUpper) && c.rowCount > 0,
+    test: (c) =>
+      (c.tableName === "train_sensors" || c.tableName === "cctv_metadata" || c.tableName === "access_logs" || c.tableName === "maintenance_logs") &&
+      /23:4[789]|23:5[012]|between/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
   {
     objectiveId: "OBJ-5",
-    test: (c) => c.tableName === "agent_movements" && /agt-001|sokolov/i.test(c.sqlUpper) && c.rowCount > 0,
+    test: (c) =>
+      c.tableName === "access_logs" &&
+      /a-17/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
   },
   {
     objectiveId: "OBJ-6",
-    test: (c) => c.tableName === "communications" && /group\s+by|count/i.test(c.sqlUpper) && c.rowCount > 0,
+    test: (c) =>
+      c.tableName === "maintenance_logs" &&
+      /carriage.*a|a.*coach|'a'/i.test(c.sqlUpper) &&
+      c.rowCount >= 2,
   },
   {
     objectiveId: "OBJ-7",
-    test: (c) => c.tableName === "financial_records" && /tr-914/i.test(c.sqlUpper) && c.rowCount > 0,
+    test: (c) =>
+      (c.tableName === "access_logs" && /dev-sec/i.test(c.sqlUpper) && c.rowCount > 0) ||
+      anyRow((r) => String(r.credential_id ?? "").toUpperCase() === "DEV-SEC", c.rows),
   },
   {
     objectiveId: "OBJ-8",
-    test: (c) => c.tableName === "identity_events" && (/count.*distinct|group\s+by/i.test(c.sqlUpper)) && c.rowCount > 0,
+    test: (c) =>
+      c.tableName === "train_sensors" &&
+      /23:4[6-9]|23:5[0-2]|between|carriage/i.test(c.sqlUpper) &&
+      c.rowCount > 0,
+  },
+];
+
+/**
+ * Python objective triggers — evaluated against the user's Python code + stdout
+ * after each Python execution. The tests look for evidence that the player wrote
+ * the right kind of loop and surfaced the right kind of data.
+ */
+export const CASE_002_PYTHON_OBJECTIVE_TRIGGERS: ObjectiveTrigger[] = [
+  {
+    // OBJ-PY1: loop over train_sensors, filter A + PRESSURE, surface the fatal spike
+    objectiveId: "OBJ-PY1",
+    test: (c) => {
+      if (c.language !== "python") return false;
+      const code = c.pythonCode ?? "";
+      const stdout = c.pythonStdout ?? "";
+      // Must iterate over train_sensors
+      if (!/train_sensors/.test(code)) return false;
+      // Must contain a for-loop
+      if (!/\bfor\b.*:/.test(code)) return false;
+      // Must filter by PRESSURE in the code
+      if (!/PRESSURE|pressure/i.test(code)) return false;
+      // Stdout must surface the fatal spike value OR a timestamp in the 23:48 window
+      // (the spike occurred at 23:48:19 with value SPIKE)
+      const stdoutHasSpike = /SPIKE/i.test(stdout);
+      const stdoutHasMurderTimestamp = /23:48:\d{2}/.test(stdout);
+      return Boolean(stdoutHasSpike || stdoutHasMurderTimestamp);
+    },
   },
   {
-    objectiveId: "OBJ-9",
-    test: (c) => /union/i.test(c.sqlUpper) && c.rowCount > 0,
+    // OBJ-PY2: cross-reference DEV-Sec access with maintenance actions
+    objectiveId: "OBJ-PY2",
+    test: (c) => {
+      if (c.language !== "python") return false;
+      const code = c.pythonCode ?? "";
+      const stdout = c.pythonStdout ?? "";
+      // Must reference access_logs AND maintenance_logs
+      if (!/access_logs/.test(code)) return false;
+      if (!/maintenance_logs/.test(code)) return false;
+      // Must filter for DEV-Sec
+      if (!/DEV-Sec|dev_sec/i.test(code)) return false;
+      // Must contain a nested or chained loop
+      const hasNestedLoop = (code.match(/\bfor\b/g) ?? []).length >= 2;
+      // Stdout must mention both an access event and a maintenance action
+      const stdoutMentionsAccess = /DEV-Sec|access/i.test(stdout);
+      const stdoutMentionsMaintenance = /maintenance|actuator|state_change|STATE_CHANGE|component/i.test(stdout);
+      return Boolean(hasNestedLoop && stdoutMentionsAccess && stdoutMentionsMaintenance);
+    },
   },
   {
-    objectiveId: "OBJ-10",
-    test: () => false,
+    // OBJ-PY3: build a merged timeline from multiple sources, sorted by timestamp
+    objectiveId: "OBJ-PY3",
+    test: (c) => {
+      if (c.language !== "python") return false;
+      const code = c.pythonCode ?? "";
+      const stdout = c.pythonStdout ?? "";
+      // Must reference at least 3 of the 4 source tables
+      const sources = ["train_sensors", "access_logs", "maintenance_logs", "cctv_metadata"];
+      const referencedCount = sources.filter((s) => code.includes(s)).length;
+      if (referencedCount < 3) return false;
+      // Must sort by timestamp
+      if (!/\.sort\s*\(/.test(code) || !/timestamp/.test(code)) return false;
+      // Stdout must contain at least 5 timeline events (timestamps)
+      const timestampCount = (stdout.match(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/g) ?? []).length;
+      return timestampCount >= 5;
+    },
   },
 ];
 
 export const CASE_002_SOLUTION: StorySolution = {
-  who: "AGT-003", // Anya Petrova
-  how: "M_CRED_THEFT",
-  why: "M_EXTRACT_KEY",
+  who: "P003", // Dev Singh
+  how: "M_TRAIN_MECHANISM",
+  why: "M_SELL_SECRETS",
   objectiveTriggers: CASE_002_OBJECTIVE_TRIGGERS,
+  pythonObjectiveTriggers: CASE_002_PYTHON_OBJECTIVE_TRIGGERS,
   reconstruction: [
-    "Anya Petrova, an FSB Intelligence Analyst, orchestrated the breach of KOSMOS-9147. She stole Colonel Viktor Sokolov's credential RUS-77A — not through hacking, but through her position inside the intelligence network. Sokolov was officially at the Moscow Secure Facility during the entire incident, hundreds of kilometers from the Plesetsk Uplink Station where the satellite access originated.",
-    "In the hours before the breach, Anya communicated with Dmitri Volkov of GRU Cyber Operations 8 times — far more than any other pair. Their messages referenced TR-914, a code that also appeared in financial records: 5 separate payments to Anya and 2 to Dmitri. The payments were structured to look routine individually, but together they funded a coordinated intelligence operation.",
-    "At 01:58 UTC, RUS-77A authenticated with KOSMOS-9147. At 02:05, the identity trail was manipulated — RUS-77A was used to claim 4 different identities, proving the access was deliberate deception. At 02:13, the satellite's telemetry went dark for exactly 7 minutes and 42 seconds. During this gap, classified orbital communication keys were extracted. Anya remained at the uplink facility throughout.",
-    "Ethan Hunt was deliberately inserted into the investigation trail. His mission assignment placed him elsewhere, but his movement records show him at the uplink facility. This was not a mistake — it was designed to create an intelligence incident that would cause multiple agencies to suspect one another. The satellite breach was only one part of a much larger operation.",
+    "Dev Singh, Arvind Rao's longtime head of security, had been secretly selling company security and logistics intelligence to a competing infrastructure consortium. Arvind discovered the betrayal and planned to expose Dev during a confidential meeting in Delhi.",
+    "Weeks before the journey, Dev secretly modified a retractable maintenance spike inside a service assembly behind the decorative wall of A-coach. The spike was connected to a concealed actuator aligned with the service path near A-17's writing desk. Dev knew Arvind always worked at the desk after dinner.",
+    "At 23:46:51, Dev's credential (DEV-Sec) accessed the security console — an action he later denied. At 23:47, the train entered Khandala Tunnel, switching CCTV to low-light mode. At 23:48:16, the hidden actuator changed state to DEPLOYED. At 23:48:19, the A-17 service-line sensor recorded a pressure spike — the moment of the fatal wound. At 23:48:20, the system returned to normal. At 23:48:21, the actuator retracted.",
+    "The cabin door never opened. Nobody entered A-17. No conventional weapon remained inside. The murder weapon was part of the train — a modified component that extended, struck, and retracted through an existing service aperture. The locked-room mystery was never about who entered the room. It was about what could reach the room without entering it.",
   ],
 };

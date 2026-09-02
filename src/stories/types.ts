@@ -65,15 +65,22 @@ export type InvestigationThread =
   | "SECURITY"
   | "MESSAGES"
   | "PHYSICAL"
-  | "ACCUSATION";
+  | "ACCUSATION"
+  | "FORENSIC";
+
+export type ObjectiveLanguage = "sql" | "python";
 
 export interface ObjectiveDefinition {
   id: string;
   title: string;
   description: string;
   thread: InvestigationThread;
+  /** Which IDE the player should use to complete this objective. */
+  language?: ObjectiveLanguage;
   /** A starter SQL query the player can load to begin investigating this objective. */
   starterQuery?: string;
+  /** A starter Python snippet the player can load for Python objectives. */
+  starterCode?: string;
   hints: {
     1: { title: string; body: string };
     2: { title: string; body: string };
@@ -87,7 +94,10 @@ export interface LeadDefinition {
   id: string;
   question: string;
   thread: InvestigationThread;
+  /** Which IDE this lead applies to. Defaults to SQL. */
+  language?: ObjectiveLanguage;
   starterQuery?: string;
+  starterCode?: string;
 }
 
 // ---------- Evidence ----------
@@ -126,6 +136,14 @@ export interface EvidenceTriggerContext {
   rows: Record<string, unknown>[];
   rowCount: number;
   tableName?: string;
+  /** Python code, when the trigger is being evaluated against a Python execution. */
+  pythonCode?: string;
+  /** Captured stdout from a Python execution, when applicable. */
+  pythonStdout?: string;
+  /** Captured result value from a Python execution, when applicable. */
+  pythonResult?: unknown;
+  /** The language this trigger is being evaluated for. */
+  language?: "sql" | "python";
 }
 
 /** A trigger that fires when a query result matches a meaningful discovery. */
@@ -175,6 +193,8 @@ export interface StorySolution {
   why: string;
   /** Query-pattern-based triggers that complete objectives (independent of evidence). */
   objectiveTriggers: ObjectiveTrigger[];
+  /** Python-pattern-based triggers that complete objectives. Evaluated after each Python run. */
+  pythonObjectiveTriggers?: ObjectiveTrigger[];
   /** Full narrative shown on the completion screen (only when accusation is correct). */
   reconstruction: string[];
 }

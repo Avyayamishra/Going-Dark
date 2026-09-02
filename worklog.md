@@ -458,3 +458,135 @@ Solution: Dev Singh remotely triggered a concealed retractable spike inside the 
 
 Build: Vite production build succeeds, 1.4MB total (656KB JS + 120KB CSS + 644KB WASM)
 Lint: 0 errors, 3 warnings (React hooks deps)
+
+---
+Task ID: PYTHON-IDE
+Agent: general-purpose
+Task: Build Pyodide-based Python IDE for the GOING DARK investigation game
+
+Work Log:
+- Read prior worklog and the existing SQL-side surfaces (`src/lib/sql/client-engine.ts`, `src/hooks/use-sql-query.ts`, `src/components/game/SearchTerminal.tsx`, `src/components/game/QueryResults.tsx`) and the story types (`SeedTable`, `Story`, `EvidenceTriggerContext`) to mirror their patterns for a Python IDE.
+- Created `src/lib/python/engine.ts` (Pyodide manager):
+  * Lazy-loads Pyodide from CDN (`https://cdn.jsdelivr.net/pyodide/v0.27.7/full/pyodide.mjs`) via dynamic `import()` with `/* @vite-ignore */` so Vite does not try to bundle it.
+  * Caches the loaded Pyodide instance in a module-level `_pyodidePromise` (singleton) so it only loads once.
+  * Defines `PythonResult = PythonSuccess | PythonFailure` where `PythonSuccess = { ok: true; stdout: string; stderr: string; result: unknown; executionTimeMs: number }` and `PythonFailure = { ok: false; error: { kind: "EMPTY" | "LOAD_ERROR" | "RUNTIME_ERROR" | "TIMEOUT"; title: string; message: string; hint?: string }; executionTimeMs: number }`.
+  * `executePython(storyId, code)`:
+    - Returns EMPTY failure when `code.trim()` is empty.
+    - Loads Pyodide (catch -> LOAD_ERROR with the underlying message as hint).
+    - Reads the active story via `STORY_REGISTRY.getStory(storyId)`, iterates `story.database.tables`, and injects each table as a Python list-of-dicts variable via `pyodide.globals.set(table.name, table.rows)` (Pyodide auto-converts JS array→list and JS object→dict). Also injects `_CASE_TABLE_NAMES` for the helper functions.
+    - Resets stdout/stderr accumulators and wires `pyodide.setStdout({ batched })` / `pyodide.setStderr({ batched })` BEFORE each run.
+    - Defines three helper functions in Python: `tables()`, `schema(table_name)`, `peek(table_name, n=5)` — they read from `globals()` so they always reflect freshly-injected data.
+    - Runs the user code via `pyodide.runPythonAsync(code)` wrapped in `Promise.race` with a 10-second `__PYTHON_TIMEOUT__` rejection -> TIMEOUT failure.
+    - Classifies Python exceptions: surfaces the last traceback line as `title`, the full traceback as `message`, and a hint pointing at the traceback.
+    - Serialises the return value: primitives returned as-is; PyProxy values converted via `.toJs({ dict_converter: Object.fromEntries })` then `JSON.stringify` with a Map-aware replacer; `undefined`/`null` -> empty string. Calls `.destroy()` on consumed PyProxies.
+  * Exports `isPythonReady(): boolean` and `preloadPython(): Promise<void>`.
+- Created `src/hooks/use-python.ts` mirroring `useSqlQuery`:
+  * Pulls `completeObjective`, `useActiveStory`, `useCompletedObjectives`, `useAudio`.
+  * `runPython(code)`: plays `execute`, calls `executePython(story.metadata.id, code)` (or short-circuits with a NO CASE SELECTED failure if no story is active), then on success plays `success` and evaluates each `story.solution.pythonObjectiveTriggers ?? []` against an `EvidenceTriggerContext` carrying `language: "python"`, `pythonCode`, `pythonStdout`, `pythonResult`, and empty SQL fields; calls `completeObjective(trigger.objectiveId)` for any trigger not already completed. On failure plays `error`.
+  * Exposes `preload()` that forwards to `preloadPython()`.
+- Created `src/components/game/PythonTerminal.tsx` mirroring `SearchTerminal.tsx`:
+  * Toolbar with `Run` button (with `Loader2` spinner while running OR loading), `Clear` button, a "Ctrl + Enter" hint, a "Pyodide" clock label, and a small `PYTHON` badge in the corner so the active IDE is unmistakable.
+  * `<textarea spellCheck={false}>` with `font-mono`, dark theme classes, and the requested placeholder (`# Write Python to analyse the case data...` + the `for p in passengers: print(p["name"])` snippet).
+  * Ctrl+Enter / Cmd+Enter runs.
+  * `loading` state: the first time the user clicks Run while Pyodide isn't ready, it sets `loading=true`, awaits `preload()`, then proceeds. A "Loading Python runtime…" indicator (Loader2 + amber text) shows in the toolbar during the load.
+  * Props: `value`, `onChange`, `onResult`, `onRunningChange?`. Uses `usePython()` for execution and `useAudio()` for the clear-button click sound.
+- Created `src/components/game/PythonOutput.tsx` mirroring `QueryResults.tsx`:
+  * Running state: `Loader2` spinner + "Running Python…".
+  * Empty state: muted `Database` icon + "No Python executed yet" + the `print(len(passengers))` hint snippet.
+  * Error state: red `XCircle` + title + monospace message (whitespace preserved for tracebacks) + optional Investigator Hint + execution-time + `error.kind` footer; adds a "retry will re-fetch from CDN" note for LOAD_ERROR.
+  * Success state: header with green `CheckCircle2`, "Execution Complete", execution time; then three sections (STDOUT, optional STDERR, RESULT) each with a small uppercase label bar and a `<pre>` body. Empty stdout -> "(no output)"; empty result -> "(no return value)". STDERR uses an amber tone to distinguish from STDOUT/RESULT. Uses `cn()` for the tone-conditional label classes.
+
+Verification:
+- `bun run lint`: 0 errors (3 pre-existing warnings in DatabaseExplorer/TopBar/use-sql-query, none in any of the four new files).
+- `bunx tsc --noEmit`: 62 pre-existing errors in the rest of the codebase (missing optional deps like `next`, `@monaco-editor/react`, `@radix-ui/*`, plus a few `implicit any` warnings in pre-existing components). NONE of the 62 reference `python`, `use-python`, `PythonTerminal`, or `PythonOutput` — the four new files are type-clean.
+
+Stage Summary:
+- Four new files added: `src/lib/python/engine.ts`, `src/hooks/use-python.ts`, `src/components/game/PythonTerminal.tsx`, `src/components/game/PythonOutput.tsx`.
+- Python runtime is fully client-side (Pyodide from CDN, cached singleton, lazy first-load).
+- Tables are injected dynamically from the active story's seed (`STORY_REGISTRY.getStory(storyId).database.tables`) — works for any case without hardcoding table names.
+- Helper functions `tables()`, `schema(name)`, `peek(name, n=5)` give players a self-documenting way to inspect the data.
+- 10-second timeout + classified errors (EMPTY / LOAD_ERROR / RUNTIME_ERROR / TIMEOUT) match the SQL IDE's error UX so players get the same forensic feedback loop.
+- `pythonObjectiveTriggers` on `StorySolution` are now evaluated against each Python run, completing objectives just like the SQL side. (Note: the existing Case 1/2/3 `solution.ts` modules don't yet define `pythonObjectiveTriggers`; the hook falls back to `?? []` so nothing breaks, and another agent can wire those triggers later.)
+- `PythonResult` is the single source of truth — defined in `engine.ts`, imported by `use-python.ts`, `PythonTerminal.tsx`, and `PythonOutput.tsx`.
+- The InvestigationDashboard integration (mounting PythonTerminal + PythonOutput, switching IDE tabs) is intentionally left for a follow-up agent per the task brief.
+
+---
+Task ID: USER-FIXES-7
+Agent: main
+Task: Fix 7 user-reported issues (archive stats, search bar, continue/reset, Python integration, detailed objectives, SQL/Python IDE toggle, doubled tab borders)
+
+Work Log:
+- Issue [1] Archive stats + Project Lazarus + delete case-001 + renumber:
+  * Deleted src/stories/case-001/ entirely (Midnight Archive)
+  * Renamed src/stories/case-002/ → case-001/ (Black Orbit, now #001)
+  * Renamed src/stories/case-003/ → case-002/ (11:47 Train, now #002)
+  * Updated all internal CASE_002→CASE_001, case-002→case-001 references via sed
+  * Updated caseNumber fields (#002→#001, #003→#002)
+  * Added src/stories/case-003/metadata.ts (PROJECT LAZARUS, COMING_SOON)
+  * Updated src/stories/registry.ts: 2 playable + 1 coming-soon
+  * Removed unused import from src/hooks/use-sql-query.ts (was importing from deleted case-001/triggers)
+  * Updated src/components/game/CaseIntroduction.tsx (case-001 beats for Black Orbit, case-002 beats for Train)
+  * Bumped store persist version 4 → 5 to invalidate stale progress data
+- Issue [1] LandingPage stats: replaced hardcoded "Free Cases 1" with dynamic computation
+  * Free Cases = STORY_REGISTRY.listAll().filter(m => m.accessType === "FREE").length = 2
+  * Upcoming = 1 (Project Lazarus)
+  * Total Cases = 3
+  * Total tables = 21 (sum across playable cases)
+  * Total records = 282
+- Issue [2] Search bar in CaseArchive:
+  * Added Input with Search icon, filters by title/victim/location/difficulty/etc.
+  * Clear-search X button appears when query is non-empty
+  * "No matches" empty state when filter produces 0 results
+  * Match count shown below the search bar
+- Issue [3] Continue/Reset progress:
+  * Added resetStory(storyId) function to src/lib/game/store.ts (resets any story by ID, exits if active)
+  * CaseCard now shows CONTINUE + RESET buttons when isInProgress
+  * CaseCard shows REPLAY + RESET when isCompleted
+  * AlertDialog confirmation before reset (uses @radix-ui/react-alert-dialog, newly installed)
+- Issue [4] Python integration in train case:
+  * Extended src/stories/types.ts: ObjectiveDefinition.language + starterCode; LeadDefinition.language + starterCode; StorySolution.pythonObjectiveTriggers
+  * Added 3 Python objectives to case-002 (OBJ-PY1, OBJ-PY2, OBJ-PY3) with detailed action-verb descriptions like "Create a loop to scan train_sensors for the fatal spike"
+  * Added 3 Python leads (LEAD-PY1, LEAD-PY2, LEAD-PY3) with starter code
+  * Added CASE_002_PYTHON_OBJECTIVE_TRIGGERS in solution.ts (evaluates pythonCode + pythonStdout)
+  * Fixed Pyodide data injection: serialised tables to JSON in JS, parsed with json.loads() in Python to ensure native dict subscripting works (was failing with JsProxy 'not subscriptable' error)
+- Issue [5] Detailed action-verb objectives:
+  * Rewrote all 10 case-001 (Black Orbit) objectives with detailed descriptions like "Write a JOIN between credentials and agents on c.owner_id = a.agent_id, filtered by WHERE c.access_id = 'RUS-77A'"
+  * Rewrote all 8 case-002 (Train) SQL objectives with detailed descriptions
+  * All objective titles now start with action verbs (Write, Use, Filter, JOIN, GROUP BY, etc.)
+- Issue [6] Python IDE + SQL/Python toggle:
+  * Installed pyodide@314.0.6 + @radix-ui/react-alert-dialog
+  * Built src/lib/python/engine.ts (Pyodide loader, table injection via JSON, helper functions tables()/schema()/peek(), 10s timeout, error classification)
+  * Built src/hooks/use-python.ts (wires execution to game store, fires pythonObjectiveTriggers)
+  * Built src/components/game/PythonTerminal.tsx (textarea + Run/Clear + PYTHON badge + first-load indicator)
+  * Built src/components/game/PythonOutput.tsx (running/empty/error/success states with STDOUT + STDERR + RESULT sections)
+  * Added IdeSwitch component to InvestigationDashboard (SQL IDE / Python IDE toggle)
+  * Dashboard now maintains separate sql + python state, routes lead loading to correct IDE
+- Issue [7] Doubled tab borders fix:
+  * Removed border-b from each tab button in SidebarShell (was creating doubled lines with container's border-b)
+  * Active tab now uses absolute-positioned bottom indicator span (h-0.5 bg-primary)
+  * Container has single shared bottom border via absolute span (h-px bg-border/60)
+  * Applied to both LEFT_TABS and RIGHT_TABS in InvestigationDashboard
+
+Verification (agent-browser):
+- LandingPage: stats show FREE CASES 2, UPCOMING 1, TOTAL CASES 3, 21 tables, 282 records ✓
+- CaseArchive: 3 cards (#001 Black Orbit, #002 11:47 Train, PROJECT LAZARUS coming soon) ✓
+- Search bar filters correctly (typing "lazarus" shows only Project Lazarus) ✓
+- Case #002 briefing loads with correct case number ✓
+- SQL IDE works: "SELECT * FROM agents;" returns 9 agents for Black Orbit ✓
+- Python IDE works: print(tables()) returns list of 10 train case tables ✓
+- Python loop works: for s in train_sensors filtered by PRESSURE in A-coach prints the SPIKE at 23:48:19 source=MAINTENANCE ✓
+- OBJ-PY1 trigger fires on correct Python code (progress goes 0/11 → 1/11) ✓
+- CONTINUE + RESET buttons appear for in-progress case #002 ✓
+- RESET dialog confirms, then case returns to "BEGIN INVESTIGATION" state ✓
+- Tab borders no longer doubled (single shared border + single active indicator) ✓
+- Lint: 0 errors, 3 pre-existing warnings (unchanged) ✓
+
+Stage Summary:
+- All 7 user-reported issues resolved and browser-verified
+- Project Lazarus added as COMING_SOON (metadata-only, not playable)
+- Case-001 (Midnight Archive) fully deleted; cases renumbered (002→001, 003→002)
+- Python IDE integrated with SQL IDE via toggle; both work end-to-end
+- 3 Python forensic objectives added to the train case with action-verb descriptions
+- All objectives rewritten with detailed action-verb descriptions
+- Continue/Reset progress buttons work with confirmation dialog
+- Search bar filters cases by any metadata field

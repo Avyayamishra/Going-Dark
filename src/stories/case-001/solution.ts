@@ -1,7 +1,6 @@
 import type { StorySolution, ObjectiveTrigger } from "@/stories/types";
 import type { EvidenceTriggerContext } from "@/stories/types";
 
-// Helpers
 function rowHas(row: Record<string, unknown>, field: string, value: string): boolean {
   return String(row[field] ?? "").toLowerCase() === value.toLowerCase();
 }
@@ -9,111 +8,58 @@ function anyRow(pred: (row: Record<string, unknown>) => boolean, rows: Record<st
   return rows.some(pred);
 }
 
-// Objective triggers: complete objectives when the player runs relevant queries.
-// These fire based on query content + result patterns, independent of evidence discovery.
 export const CASE_001_OBJECTIVE_TRIGGERS: ObjectiveTrigger[] = [
-  // OBJ-1: who was present during TOD — fires when querying visits in the TOD window
   {
     objectiveId: "OBJ-1",
-    test: (c) =>
-      c.tableName === "visits" &&
-      /22:[34]\d|22:5\d|between/i.test(c.sqlUpper) &&
-      c.rowCount > 0,
+    test: (c) => c.tableName === "satellite_events" && /01:5|02:[0-3]|between/i.test(c.sqlUpper) && c.rowCount > 0,
   },
-  // OBJ-2: movement contradiction — fires when querying a suspect's visits and seeing re-entry
   {
     objectiveId: "OBJ-2",
-    test: (c) =>
-      c.tableName === "visits" &&
-      /maya/i.test(c.sqlUpper) &&
-      c.rowCount >= 5,
+    test: (c) => c.tableName === "satellite_events" && /02:1[3-9]|02:2[0-1]|between/i.test(c.sqlUpper) && c.rowCount >= 0,
   },
-  // OBJ-3: investigate TR-4817 — fires when querying transactions with TR-4817
   {
     objectiveId: "OBJ-3",
-    test: (c) =>
-      c.tableName === "transactions" &&
-      /tr-4817/i.test(c.sqlUpper) &&
-      c.rowCount >= 3,
+    test: (c) => c.tableName === "access_logs" && (/distinct|rus-77a/i.test(c.sqlUpper)) && c.rowCount > 0,
   },
-  // OBJ-4: camera gap — fires when finding CAMERA_DISABLED events
   {
     objectiveId: "OBJ-4",
-    test: (c) =>
-      c.tableName === "security_logs" &&
-      (/camera_disabled/i.test(c.sqlUpper) || anyRow((r) => String(r.event_type ?? "").toUpperCase() === "CAMERA_DISABLED", c.rows)),
+    test: (c) => c.tableName === "credentials" && /rus-77a|join/i.test(c.sqlUpper) && c.rowCount > 0,
   },
-  // OBJ-5: communications with Elias — fires when querying calls/messages involving Elias
   {
     objectiveId: "OBJ-5",
-    test: (c) =>
-      (c.tableName === "calls" || c.tableName === "messages") &&
-      /elias/i.test(c.sqlUpper) &&
-      c.rowCount >= 3,
+    test: (c) => c.tableName === "agent_movements" && /agt-001|sokolov/i.test(c.sqlUpper) && c.rowCount > 0,
   },
-  // OBJ-6: coordination — fires when finding Maya-Daniel messages or calls
   {
     objectiveId: "OBJ-6",
-    test: (c) => {
-      const msgCoordination =
-        c.tableName === "messages" &&
-        anyRow(
-          (r) =>
-            (rowHas(r, "sender_name", "Maya Chen") && rowHas(r, "receiver_name", "Daniel Brooks")) ||
-            (rowHas(r, "sender_name", "Daniel Brooks") && rowHas(r, "receiver_name", "Maya Chen")),
-          c.rows,
-        );
-      const callCoordination =
-        c.tableName === "calls" &&
-        anyRow(
-          (r) =>
-            (rowHas(r, "caller_name", "Maya Chen") && rowHas(r, "receiver_name", "Daniel Brooks")) ||
-            (rowHas(r, "caller_name", "Daniel Brooks") && rowHas(r, "receiver_name", "Maya Chen")),
-          c.rows,
-        );
-      return msgCoordination || callCoordination;
-    },
+    test: (c) => c.tableName === "communications" && /group\s+by|count/i.test(c.sqlUpper) && c.rowCount > 0,
   },
-  // OBJ-7: confrontation — fires when finding Elias→Maya messages around 20:45
   {
     objectiveId: "OBJ-7",
-    test: (c) =>
-      c.tableName === "messages" &&
-      /elias/i.test(c.sqlUpper) &&
-      /maya/i.test(c.sqlUpper) &&
-      c.rowCount > 0,
+    test: (c) => c.tableName === "financial_records" && /tr-914/i.test(c.sqlUpper) && c.rowCount > 0,
   },
-  // OBJ-8: wiped terminal — fires when finding TERMINAL_WIPE events
   {
     objectiveId: "OBJ-8",
-    test: (c) =>
-      c.tableName === "security_logs" &&
-      (/terminal_wipe/i.test(c.sqlUpper) || anyRow((r) => String(r.event_type ?? "").toUpperCase() === "TERMINAL_WIPE", c.rows)),
+    test: (c) => c.tableName === "identity_events" && (/count.*distinct|group\s+by/i.test(c.sqlUpper)) && c.rowCount > 0,
   },
-  // OBJ-9: tie money to suspect — fires when aggregating TR-4817 by account_holder
   {
     objectiveId: "OBJ-9",
-    test: (c) =>
-      c.tableName === "transactions" &&
-      /tr-4817/i.test(c.sqlUpper) &&
-      /group\s+by/i.test(c.sqlUpper) &&
-      anyRow((r) => /maya/i.test(String(r.account_holder ?? "")), c.rows),
+    test: (c) => /union/i.test(c.sqlUpper) && c.rowCount > 0,
   },
-  // OBJ-10: build accusation — fires when the player has enough evidence (checked separately)
   {
     objectiveId: "OBJ-10",
-    test: () => false, // OBJ-10 completes via the accusation flow, not queries
+    test: () => false,
   },
 ];
 
 export const CASE_001_SOLUTION: StorySolution = {
-  who: "S001", // Maya Chen
-  how: "M_RETURN_ARCHIVE",
-  why: "M_EMBEZZLEMENT",
+  who: "AGT-003", // Anya Petrova
+  how: "M_CRED_THEFT",
+  why: "M_EXTRACT_KEY",
   objectiveTriggers: CASE_001_OBJECTIVE_TRIGGERS,
   reconstruction: [
-    "Over several months, CFO Maya Chen embezzled funds from Nexora Systems through a scheme of small vendor payments tagged with the reference code TR-4817. Fourteen transactions — outward payments to five shell consulting firms, with kickbacks routed back to her personal account — totalled tens of thousands of dollars. Individually, each payment looked routine. Aggregated, they were a confession.",
-    "On the night of March 14, CEO Elias Voss completed an audit that exposed the pattern. He invited Maya to a private meeting at the Archive at 22:30 — ostensibly to walk her through the file. Maya messaged Daniel Brooks, Head of Security: \u201CHe knows. He pulled the TR-4817 file\u2026 I need the room dark.\u201D Daniel disabled the Archive camera, CAM-04, from the Security Control Room at 22:30. Maya, who had supposedly driven home at 21:00, secretly re-entered the building through the unguarded Side Entrance at 22:18.",
-    "She entered the Archive at 22:41 — during the estimated time of death — and killed Elias by manual strangulation. She then wiped the archive terminal at 22:50, authenticated as herself, to destroy the local copy of the audit, took Elias\u2019s phone to suppress his messages, and exited at 22:54. Daniel sent a final confirmation by SMS: \u201CDone. Drive safe.\u201D Ryan Cole discovered the body at 23:47.",
+    "Anya Petrova, an FSB Intelligence Analyst, orchestrated the breach of KOSMOS-9147. She stole Colonel Viktor Sokolov's credential RUS-77A — not through hacking, but through her position inside the intelligence network. Sokolov was officially at the Moscow Secure Facility during the entire incident, hundreds of kilometers from the Plesetsk Uplink Station where the satellite access originated.",
+    "In the hours before the breach, Anya communicated with Dmitri Volkov of GRU Cyber Operations 8 times — far more than any other pair. Their messages referenced TR-914, a code that also appeared in financial records: 5 separate payments to Anya and 2 to Dmitri. The payments were structured to look routine individually, but together they funded a coordinated intelligence operation.",
+    "At 01:58 UTC, RUS-77A authenticated with KOSMOS-9147. At 02:05, the identity trail was manipulated — RUS-77A was used to claim 4 different identities, proving the access was deliberate deception. At 02:13, the satellite's telemetry went dark for exactly 7 minutes and 42 seconds. During this gap, classified orbital communication keys were extracted. Anya remained at the uplink facility throughout.",
+    "Ethan Hunt was deliberately inserted into the investigation trail. His mission assignment placed him elsewhere, but his movement records show him at the uplink facility. This was not a mistake — it was designed to create an intelligence incident that would cause multiple agencies to suspect one another. The satellite breach was only one part of a much larger operation.",
   ],
 };
